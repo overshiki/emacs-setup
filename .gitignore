@@ -1,0 +1,19 @@
+# Emacs backup and auto-save files
+*~
+\#*\#
+.#*
+
+# Emacs session files
+session.*
+
+# Racket compiled files
+compiled/
+*.zo
+
+# Local test files
+*.bak
+*.tmp
+
+# OS files
+.DS_Store
+Thumbs.db

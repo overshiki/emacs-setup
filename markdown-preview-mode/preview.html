@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8"/>
+<title>Markdown + KaTeX Preview</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/github-markdown-css/github-markdown.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<style>
+.markdown-body { box-sizing: border-box; max-width: 900px; margin: 0 auto; padding: 45px; }
+</style>
+</head>
+<body class="markdown-body">
+<div id="content">Loading...</div>
+
+<script src="https://cdn.jsdelivr.net/npm/marked@9.1.6/marked.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+
+<script>
+function b64DecodeUnicode(str) {
+  // Decode base64 to UTF-8 string
+  return decodeURIComponent(atob(str).split('').map(function(c) {
+    return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+  }).join(''));
+}
+
+function render() {
+  var el = document.querySelector('div[data-b64]');
+  if (!el) {
+    console.log('No data-b64 element found');
+    return;
+  }
+  
+  var b64 = el.getAttribute('data-b64');
+  console.log('Base64 length:', b64.length);
+  
+  var source;
+  try {
+    source = b64DecodeUnicode(b64);
+  } catch(e) {
+    console.error('Decode failed:', e);
+    document.getElementById('content').innerHTML = '<pre>Decode error: ' + e.message + '</pre>';
+    return;
+  }
+  
+  console.log('Source:', source.substring(0, 500));
+  
+  // Extract math
+  var mathBlocks = [];
+  
+  var stage1 = source.replace(/\$\$([\s\S]*?)\$\$/g, function(match, math) {
+    var idx = mathBlocks.length;
+    mathBlocks.push({type: 'display', math: math});
+    return '\u0000MATH' + idx + '\u0000';
+  });
+  
+  var stage2 = stage1.replace(/\$([^\u0000\$][^\$]*?)\$/g, function(match, math) {
+    var idx = mathBlocks.length;
+    mathBlocks.push({type: 'inline', math: math});
+    return '\u0000MATH' + idx + '\u0000';
+  });
+  
+  // Parse markdown
+  var html = marked.parse(stage2, {gfm: true, breaks: false});
+  
+  // Render math
+  mathBlocks.forEach(function(block, i) {
+    var placeholder = '\u0000MATH' + i + '\u0000';
+    try {
+      var rendered = katex.renderToString(block.math, {
+        displayMode: block.type === 'display',
+        throwOnError: false,
+        strict: false
+      });
+      html = html.split(placeholder).join(rendered);
+    } catch(e) {
+      console.error('KaTeX error:', e, 'Math:', block.math);
+      var fallback = '<span style="color:red">' + (block.type === 'display' ? '$$' : '$') 
+                     + block.math + (block.type === 'display' ? '$$' : '$') + '</span>';
+      html = html.split(placeholder).join(fallback);
+    }
+  });
+  
+  document.getElementById('content').innerHTML = html;
+}
+
+// Run on load and on updates
+document.addEventListener("DOMContentLoaded", render);
+
+// Watch for DOM changes (new content from Emacs)
+var observer = new MutationObserver(function(muts) {
+  muts.forEach(function(m) {
+    if (m.type === 'childList') {
+      render();
+    }
+  });
+});
+observer.observe(document.body, {childList: true, subtree: true});
+</script>
+
+</body>
+</html>
