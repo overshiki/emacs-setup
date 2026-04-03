@@ -50,7 +50,8 @@
  ;; If there is more than one, they won't work right.
  '(custom-enabled-themes '(doom-ayu-dark))
  '(custom-safe-themes
-   '("599f72b66933ea8ba6fce3ae9e5e0b4e00311c2cbf01a6f46ac789227803dd96"
+   '("5c7720c63b729140ed88cf35413f36c728ab7c70f8cd8422d9ee1cedeb618de5"
+     "599f72b66933ea8ba6fce3ae9e5e0b4e00311c2cbf01a6f46ac789227803dd96"
      "166a2faa9dc5b5b3359f7a31a09127ebf7a7926562710367086fcc8fc72145da"
      "5244ba0273a952a536e07abaad1fdf7c90d7ebb3647f36269c23bfd1cf20b0b8"
      "73ae9ba31609c7cb11be2012f06ffb5e3c9c34886ea60cc9c2a72e4e2a281ddb"
@@ -78,7 +79,8 @@
 ;; (load-theme 'doom-dark+ :no-confirm)
 ;; (load-theme 'doom-ayu-dark :no-confirm)
 ;; (load-theme 'gruber-darker :no-confirm)
-(load-theme 'doom-ayu-light :no-confirm)
+;; (load-theme 'doom-ayu-light :no-confirm)
+(load-theme 'doom-one-light :no-confirm)
 
 ;; (use-package dired+
 ;;   :ensure t
@@ -555,6 +557,37 @@ This command does not push erased text to kill-ring."
 (merlin-eldoc-setup)
 
 
+;; Jump to Dired (from file buffer)
+(defun dired-jump-to-current-dir ()
+  "Open Dired in the directory of the current buffer's file."
+  (interactive)
+  (if buffer-file-name
+      (progn
+        (setq dired-jump-last-buffer (current-buffer))
+        (dired (file-name-directory buffer-file-name)))
+    (dired default-directory)))
+
+;; Jump back to file (from Dired)
+(defvar dired-jump-last-buffer nil
+  "Last buffer before jumping to Dired.")
+
+(defun jump-back-to-file-from-dired ()
+  "If in Dired, jump back to the file at point or last buffer."
+  (interactive)
+  (if (derived-mode-p 'dired-mode)
+      (let ((file (dired-get-file-for-visit)))
+        (cond
+         ((file-regular-p file)
+          (find-file file))
+         ((and dired-jump-last-buffer (buffer-live-p dired-jump-last-buffer))
+          (switch-to-buffer dired-jump-last-buffer))
+         (t (message "No file to jump to"))))
+    (message "Not in Dired")))
+
+;; Keybindings
+(global-set-key (kbd "C-x C-<up>") #'dired-jump-to-current-dir)
+(global-set-key (kbd "C-x C-<down>") #'jump-back-to-file-from-dired)
+
 ;; ========== markdown-preview-mode Configuration ==========
 ;; ============================================
 ;; Configuration
@@ -591,3 +624,10 @@ This command does not push erased text to kill-ring."
 (add-to-list 'auto-mode-alist '("\\.md\\'" . markdown-mode))
 (add-to-list 'auto-mode-alist '("\\.markdown\\'" . markdown-mode))
 
+(global-auto-revert-mode t)
+(setq auto-revert-verbose nil)
+(setq auto-revert-interval 1)            ; Check every second (default is 5)
+(setq revert-without-query '(".*"))      ; Never ask, just reload
+
+(load-file (let ((coding-system-for-read 'utf-8))
+                (shell-command-to-string "agda --emacs-mode locate")))
