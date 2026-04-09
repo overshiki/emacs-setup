@@ -557,72 +557,156 @@ This command does not push erased text to kill-ring."
 (merlin-eldoc-setup)
 
 
-;; Jump to Dired (from file buffer)
-(defun dired-jump-to-current-dir ()
-  "Open Dired in the directory of the current buffer's file."
-  (interactive)
-  (if buffer-file-name
-      (progn
-        (setq dired-jump-last-buffer (current-buffer))
-        (dired (file-name-directory buffer-file-name)))
-    (dired default-directory)))
+(defvar dired-jump-history nil
+  "Stack of visited directories for C-x C-<down> navigation.")
 
-;; Jump back to file (from Dired)
 (defvar dired-jump-last-buffer nil
   "Last buffer before jumping to Dired.")
 
-(defun jump-back-to-file-from-dired ()
-  "If in Dired, jump back to the file at point or last buffer."
+(defun dired-jump-to-current-dir ()
+  "Open Dired in current file's directory, or go to parent if already in Dired."
   (interactive)
   (if (derived-mode-p 'dired-mode)
-      (let ((file (dired-get-file-for-visit)))
-        (cond
-         ((file-regular-p file)
-          (find-file file))
-         ((and dired-jump-last-buffer (buffer-live-p dired-jump-last-buffer))
-          (switch-to-buffer dired-jump-last-buffer))
-         (t (message "No file to jump to"))))
-    (message "Not in Dired")))
+      ;; Already in Dired: push current to history and go to parent
+      (let ((current-dir (dired-current-directory)))
+        (push current-dir dired-jump-history)
+        (dired-up-directory))
+    ;; Not in Dired: save buffer and jump to its directory
+    (progn
+      (setq dired-jump-history nil)  ; Clear history on fresh jump
+      (when buffer-file-name
+        (setq dired-jump-last-buffer (current-buffer)))
+      (let ((target-dir (if buffer-file-name
+                            (file-name-directory buffer-file-name)
+                          default-directory)))
+        (push target-dir dired-jump-history)
+        (dired target-dir)))))
+
+(defun jump-back-from-dired ()
+  "Go back through history: child dir → last buffer."
+  (interactive)
+  (cond
+   ;; In Dired with history: go to child directory
+   ((and (derived-mode-p 'dired-mode) dired-jump-history)
+    (let ((prev-dir (pop dired-jump-history)))
+      (if (and prev-dir (file-directory-p prev-dir))
+          (dired prev-dir)
+        ;; History empty or invalid, try last buffer
+        (when (and dired-jump-last-buffer (buffer-live-p dired-jump-last-buffer))
+          (switch-to-buffer dired-jump-last-buffer)
+          (setq dired-jump-last-buffer nil)))))
+   
+   ;; In Dired, no history, have last buffer: go to it
+   ((and (derived-mode-p 'dired-mode) dired-jump-last-buffer 
+         (buffer-live-p dired-jump-last-buffer))
+    (switch-to-buffer dired-jump-last-buffer)
+    (setq dired-jump-last-buffer nil))
+   
+   ;; Not in Dired: message
+   ((not (derived-mode-p 'dired-mode))
+    (message "Not in Dired"))
+   
+   ;; Nothing to go back to
+   (t (message "No previous location"))))
 
 ;; Keybindings
 (global-set-key (kbd "C-x C-<up>") #'dired-jump-to-current-dir)
-(global-set-key (kbd "C-x C-<down>") #'jump-back-to-file-from-dired)
+(global-set-key (kbd "C-x C-<down>") #'jump-back-from-dired)
+
+(defun next-file-by-extension ()
+  "Go to next file with same extension in current directory."
+  (interactive)
+  (let* ((current-file (buffer-file-name))
+         (ext (when current-file (file-name-extension current-file)))
+         (dir (when current-file (file-name-directory current-file)))
+         (files (when dir
+                  (sort (directory-files dir nil (concat "\\." ext "$") t)
+                        #'string<)))
+         (next (when files
+                 (cadr (member (file-name-nondirectory current-file) files)))))
+    (cond
+     ((not current-file) (message "Not visiting a file"))
+     ((not ext) (message "Current file has no extension"))
+     ((not next) (message "No next .%s file" ext))
+     (t (find-file (expand-file-name next dir))))))
+
+;; ;; Bind to C-c C-c <down>
+;; (with-eval-after-load 'markdown-mode
+;;   (define-key markdown-mode-map (kbd "C-c C-c <down>") #'next-file-by-extension))
+
+(defun prev-file-by-extension ()
+  "Go to previous file with same extension in current directory."
+  (interactive)
+  (let* ((current-file (buffer-file-name))
+         (ext (when current-file (file-name-extension current-file)))
+         (dir (when current-file (file-name-directory current-file)))
+         (files (when dir
+                  (sort (directory-files dir nil (concat "\\." ext "$") t)
+                        #'string<)))
+         (prev (when files
+                 (let ((pos (cl-position (file-name-nondirectory current-file)
+                                         files :test #'string=)))
+                   (when (and pos (> pos 0))
+                     (nth (1- pos) files))))))
+    (cond
+     ((not current-file) (message "Not visiting a file"))
+     ((not ext) (message "Current file has no extension"))
+     ((not prev) (message "No previous .%s file" ext))
+     (t (find-file (expand-file-name prev dir))))))
+
+;; Bindings
+(with-eval-after-load 'markdown-mode
+  (define-key markdown-mode-map (kbd "C-c C-c <down>") #'next-file-by-extension)
+  (define-key markdown-mode-map (kbd "C-c C-c <up>") #'prev-file-by-extension))
 
 ;; ========== markdown-preview-mode Configuration ==========
 ;; ============================================
 ;; Configuration
 ;; ============================================
 
-;; Tell markdown-preview-mode where to find custom template
-(setq markdown-preview--preview-template
-      (expand-file-name "~/.emacs.d/markdown-preview-mode/preview.html"))
-
-;; Override to send raw markdown instead of rendered HTML
-(with-eval-after-load 'markdown-preview-mode
-  (defun markdown-preview--send-preview-to (websocket preview-uuid)
-    (let ((md-buffer (gethash preview-uuid markdown-preview--preview-buffers)))
-      (when md-buffer
-        (with-current-buffer md-buffer
-          (let* ((raw-source (buffer-substring-no-properties (point-min) (point-max)))
-                 (total-lines (max 1 (count-lines (point-min) (point-max))))
-                 (current-line (line-number-at-pos))
-                 (window-lines (count-screen-lines (window-start) (point)))
-                 (mark-position-percent (number-to-string 
-                    (truncate (* 100 (/ (float (- current-line (/ window-lines 2))) total-lines)))))
-                 ;; Encode to UTF-8 bytes first, then base64
-                 (utf8-bytes (encode-coding-string raw-source 'utf-8))
-                 (encoded-source (base64-encode-string utf8-bytes t)))
-            
-            (websocket-send-text websocket
-              (concat "<div data-b64=\""
-                      encoded-source
-                      "\" data-pos=\""
-                      mark-position-percent
-                      "\"></div>"))))))))
-
 ;; Auto-mode for .md files
 (add-to-list 'auto-mode-alist '("\\.md\\'" . markdown-mode))
 (add-to-list 'auto-mode-alist '("\\.markdown\\'" . markdown-mode))
+
+(load "~/.emacs.d/modern-eww-style.el")
+;; Basic usage
+(require 'modern-eww-style)
+(modern-eww-style-enable)
+
+;; With shrface integration (RECOMMENDED)
+(require 'shrface)              ; Install from MELPA first
+(require 'modern-eww-style)
+(modern-eww-style-enable)
+(modern-eww-style-shrface-enable)   ; Enable enhanced tables
+
+
+;; (load "~/.emacs.d/modern-w3m-style.el")
+;; (require 'modern-w3m-style)
+;; ;; Enable for all w3m buffers
+;; (modern-w3m-style-global-mode 1)
+;; ;; Or use presets
+;; (modern-w3m-style-github-preset)
+
+;; ;; Configure markdown-mode to use w3m for live preview
+;; (defun markdown-live-preview-window-w3m (file)
+;;   "Preview FILE with w3m.
+;; To be used with `markdown-live-preview-window-function'."
+;;   (if (require 'w3m nil t)
+;;       (progn
+;;         (w3m (concat "file://" file))
+;;         (get-buffer "*w3m*"))
+;;     (error "w3m is not present or not loaded on this version of Emacs")))
+
+;; ;; Set the preview function to use w3m
+;; (setq markdown-live-preview-window-function #'markdown-live-preview-window-w3m
+;; )
+
+(defun display-current-dir ()
+  "Display the directory of the current buffer's file in the minibuffer."
+  (interactive)
+  (if buffer-file-name
+      (message "%s" (file-name-directory buffer-file-name))
+    (message "%s" default-directory)))
 
 (global-auto-revert-mode t)
 (setq auto-revert-verbose nil)
@@ -631,3 +715,4 @@ This command does not push erased text to kill-ring."
 
 (load-file (let ((coding-system-for-read 'utf-8))
                 (shell-command-to-string "agda --emacs-mode locate")))
+
