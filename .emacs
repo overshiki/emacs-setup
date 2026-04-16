@@ -57,7 +57,20 @@
      "73ae9ba31609c7cb11be2012f06ffb5e3c9c34886ea60cc9c2a72e4e2a281ddb"
      "9b9d7a851a8e26f294e778e02c8df25c8a3b15170e6f9fd6965ac5f2544ef2a9"
      default))
- '(package-selected-packages nil))
+ '(package-selected-packages
+   '(auto-highlight-symbol cape clipmon cmake-mode company corfu counsel
+                           diredfl doom-themes elixir-mode
+                           futhark-mode git-gutter go-mode
+                           gruber-darker-theme haskell-mode
+                           highlight-indent-guides
+                           highlight-parentheses jedi julia-mode
+                           lsp-haskell markdown-preview-mode
+                           math-preview mathjax matlab-mode
+                           merlin-eldoc multiple-cursors ninja-mode
+                           racket-mode rust-mode scala-mode shrface
+                           space-theming spacemacs-theme swiper-helm
+                           term-toggle transpose-frame tuareg w3m
+                           wgrep-ag)))
 (custom-set-faces
  ;; custom-set-faces was added by Custom.
  ;; If you edit it by hand, you could mess it up, so be careful.
@@ -136,8 +149,8 @@
 (define-key global-map (kbd "C-z") 'undo)
 (define-key global-map (kbd "C-x C-e") 'end-of-buffer)
 (define-key global-map (kbd "C-x e") 'end-of-buffer)
-(define-key global-map (kbd "C-x C-a") 'beginning-of-buffer)
-(define-key global-map (kbd "C-x a") 'beginning-of-buffer)
+(define-key global-map (kbd "C-x C-g") 'beginning-of-buffer)
+(define-key global-map (kbd "C-x g") 'beginning-of-buffer)
 
 (define-key global-map (kbd "C-j") 'comment-line)
 
@@ -613,6 +626,87 @@ This command does not push erased text to kill-ring."
 (global-set-key (kbd "C-x C-<up>") #'dired-jump-to-current-dir)
 (global-set-key (kbd "C-x C-<down>") #'jump-back-from-dired)
 
+(global-set-key (kbd "C-x <up>") #'dired-jump-to-current-dir)
+(global-set-key (kbd "C-x <down>") #'jump-back-from-dired)
+
+(defun copy-token-to-clipboard ()
+  "Read first line from ~/.token and copy to clipboard."
+  (interactive)
+  (let ((token-file (expand-file-name "~/.token")))
+    (if (file-exists-p token-file)
+        (with-temp-buffer
+          (insert-file-contents token-file)
+          (goto-char (point-min))
+          (let ((token (buffer-substring-no-properties
+                        (point)
+                        (line-end-position))))
+            (kill-new token)
+            (message "Token copied to clipboard: %s..." (substring token 0 (min 10 (length token))))))
+      (error "Token file not found: %s" token-file))))
+
+;; Bind to C-c t (or choose your own)
+(global-set-key (kbd "C-c t") 'copy-token-to-clipboard)
+
+(require 'json)
+
+(defun ssh-login-from-config ()
+  "Read ~/.server JSON (user, ip), prompt for password, login via TRAMP."
+  (interactive)
+  (let* ((config-file (expand-file-name "~/.server"))
+         (json-data (json-read-file config-file))
+         (user (cdr (assoc 'user json-data)))
+         (ip (cdr (assoc 'ip json-data)))
+         (passwd (read-passwd (format "Password for %s@%s: " user ip))))
+    (when (or (null user) (null ip))
+      (error "Missing 'user' or 'ip' in ~/.server"))
+    ;; Temporarily cache password for this TRAMP session
+    (let ((auth-source-creation-prompts
+           `((user . ,user) (host . ,ip) (secret . ,passwd))))
+      (auth-source-remember '(:host ,ip :user ,user :protocol "ssh")
+                            `((secret . ,passwd))))
+    (find-file (format "/ssh:%s@%s:~/" user ip))
+    (message "Connecting to %s@%s..." user ip)))
+
+;; Bind to C-c S
+(global-set-key (kbd "C-c S") 'ssh-login-from-config)
+
+(defun my-dired-file-split-layout ()
+  "Split window: left 1/3 Dired (current dir), right 2/3 current file."
+  (interactive)
+  (let ((current-file buffer-file-name)
+        (current-buffer (current-buffer))
+        (current-dir (if buffer-file-name
+                         (file-name-directory buffer-file-name)
+                       default-directory))
+        (total-width (window-width)))
+    ;; Start fresh
+    (delete-other-windows)
+    ;; Create left window at exactly 1/3 width
+    (let ((left-win (split-window (selected-window) 
+                                  (floor (* total-width 0.66)) 
+                                  'left)))
+      ;; Left window: Dired
+      (select-window left-win)
+      (dired current-dir)
+      ;; Right window: original file
+      (let ((right-win (next-window)))
+        (select-window right-win)
+        (when current-file
+          (switch-to-buffer current-buffer))))))
+
+;; Bind to C-c 3
+(global-set-key (kbd "C-c 3") #'my-dired-file-split-layout)
+
+(defun my-toggle-split-layout ()
+  "Toggle between split layout and single window."
+  (interactive)
+  (if (= (count-windows) 1)
+      (my-dired-file-split-layout)
+    (delete-other-windows)))
+
+(global-set-key (kbd "C-c 3") #'my-toggle-split-layout)
+
+
 (defun next-file-by-extension ()
   "Go to next file with same extension in current directory."
   (interactive)
@@ -668,16 +762,54 @@ This command does not push erased text to kill-ring."
 (add-to-list 'auto-mode-alist '("\\.md\\'" . markdown-mode))
 (add-to-list 'auto-mode-alist '("\\.markdown\\'" . markdown-mode))
 
-(load "~/.emacs.d/modern-eww-style.el")
-;; Basic usage
-(require 'modern-eww-style)
-(modern-eww-style-enable)
 
-;; With shrface integration (RECOMMENDED)
-(require 'shrface)              ; Install from MELPA first
-(require 'modern-eww-style)
-(modern-eww-style-enable)
-(modern-eww-style-shrface-enable)   ; Enable enhanced tables
+(setq markdown-preview--preview-template
+      (expand-file-name "~/.emacs.d/markdown-preview-mode/preview.html"))
+
+(defun my-markdown-preview-eww-full ()
+  "Render markdown to HTML and open in EWW full window."
+  (interactive)
+  (let* ((md-buffer (current-buffer))
+         (md-file (or buffer-file-name
+                      (make-temp-file "markdown-preview" nil ".md")))
+         (html-file (concat (file-name-sans-extension md-file) ".html"))
+         (template markdown-preview--preview-template)
+         (raw-content (buffer-substring-no-properties (point-min) (point-max))))
+    
+    ;; Save temp file if buffer not visiting file
+    (unless buffer-file-name
+      (with-temp-file md-file
+        (insert raw-content)))
+    
+    ;; Generate HTML with embedded markdown
+    (with-temp-file html-file
+      (when (file-exists-p template)
+        (insert-file-contents template))
+      ;; Replace placeholder or insert script call
+      (goto-char (point-min))
+      (let ((base64-md (base64-encode-string 
+                        (encode-coding-string raw-content 'utf-8) t)))
+        (if (search-forward "<div id=\"content\">" nil t)
+            (replace-match (format "<div id=\"content\" data-markdown=\"%s\">" base64-md))
+          ;; Fallback
+          (goto-char (point-max))
+          (insert (format "\n<script>renderMarkdown('%s');</script>" base64-md)))))
+    
+    ;; Open in EWW
+    (eww-open-file html-file)
+    (delete-other-windows)))
+
+
+;; (load "~/.emacs.d/modern-eww-style.el")
+;; ;; Basic usage
+;; (require 'modern-eww-style)
+;; (modern-eww-style-enable)
+
+;; ;; With shrface integration (RECOMMENDED)
+;; (require 'shrface)              ; Install from MELPA first
+;; (require 'modern-eww-style)
+;; (modern-eww-style-enable)
+;; (modern-eww-style-shrface-enable)   ; Enable enhanced tables
 
 
 ;; (load "~/.emacs.d/modern-w3m-style.el")
@@ -716,3 +848,23 @@ This command does not push erased text to kill-ring."
 (load-file (let ((coding-system-for-read 'utf-8))
                 (shell-command-to-string "agda --emacs-mode locate")))
 
+
+
+
+(put 'downcase-region 'disabled nil)
+
+
+(defun my-show-init-bindings ()
+  "Show active key bindings from init file, skipping commented lines."
+  (interactive)
+  (with-current-buffer (find-file-noselect user-init-file)
+    (goto-char (point-min))
+    (with-output-to-temp-buffer "*My Key Bindings*"
+      (princ "Active Key Bindings:\n\n")
+      (while (re-search-forward "^(\\s-*\\(global-set-key\\|define-key\\)" nil t)
+        ;; Check if line is commented (semicolon before open paren)
+        (unless (save-excursion
+                  (beginning-of-line)
+                  (looking-at ".*;.*("))
+          (let ((line (thing-at-point 'line t)))
+            (princ line)))))))
