@@ -60,7 +60,7 @@
  '(package-selected-packages
    '(auto-highlight-symbol cape clipmon cmake-mode company corfu counsel
                            diredfl doom-themes elixir-mode
-                           futhark-mode git-gutter go-mode
+                           futhark-mode git-gutter go-mode grip-mode
                            gruber-darker-theme haskell-mode
                            highlight-indent-guides
                            highlight-parentheses jedi julia-mode
@@ -69,8 +69,9 @@
                            merlin-eldoc multiple-cursors ninja-mode
                            racket-mode rust-mode scala-mode shrface
                            space-theming spacemacs-theme swiper-helm
-                           term-toggle transpose-frame tuareg w3m
-                           wgrep-ag)))
+                           term-toggle texfrag toml-mode
+                           transpose-frame tuareg valign w3m wgrep-ag
+                           yaml-mode)))
 (custom-set-faces
  ;; custom-set-faces was added by Custom.
  ;; If you edit it by hand, you could mess it up, so be careful.
@@ -360,8 +361,8 @@ This command does not push erased text to kill-ring."
 (require 'lsp)
 (require 'lsp-haskell)
 ;; Hooks so haskell and literate haskell major modes trigger LSP setup
-(add-hook 'haskell-mode-hook #'lsp)
-(add-hook 'haskell-literate-mode-hook #'lsp)
+;; (add-hook 'haskell-mode-hook #'lsp)
+;; (add-hook 'haskell-literate-mode-hook #'lsp)
 
 
 (defun haskell-format-buffer-with-ormolu ()
@@ -385,10 +386,10 @@ This command does not push erased text to kill-ring."
 
 
 
-(use-package lsp-mode
-  :hook (python-mode . lsp)
-  :config
-  (setq lsp-pyls-server-command '("pylsp")))
+;; (use-package lsp-mode
+;;   :hook (python-mode . lsp)
+;;   :config
+;;   (setq lsp-pyls-server-command '("pylsp")))
 
 
 (add-hook 'flymake-mode-hook
@@ -763,41 +764,41 @@ This command does not push erased text to kill-ring."
 (add-to-list 'auto-mode-alist '("\\.markdown\\'" . markdown-mode))
 
 
-(setq markdown-preview--preview-template
-      (expand-file-name "~/.emacs.d/markdown-preview-mode/preview.html"))
+;; (setq markdown-preview--preview-template
+;;       (expand-file-name "~/.emacs.d/markdown-preview-mode/preview.html"))
 
-(defun my-markdown-preview-eww-full ()
-  "Render markdown to HTML and open in EWW full window."
-  (interactive)
-  (let* ((md-buffer (current-buffer))
-         (md-file (or buffer-file-name
-                      (make-temp-file "markdown-preview" nil ".md")))
-         (html-file (concat (file-name-sans-extension md-file) ".html"))
-         (template markdown-preview--preview-template)
-         (raw-content (buffer-substring-no-properties (point-min) (point-max))))
+;; (defun my-markdown-preview-eww-full ()
+;;   "Render markdown to HTML and open in EWW full window."
+;;   (interactive)
+;;   (let* ((md-buffer (current-buffer))
+;;          (md-file (or buffer-file-name
+;;                       (make-temp-file "markdown-preview" nil ".md")))
+;;          (html-file (concat (file-name-sans-extension md-file) ".html"))
+;;          (template markdown-preview--preview-template)
+;;          (raw-content (buffer-substring-no-properties (point-min) (point-max))))
     
-    ;; Save temp file if buffer not visiting file
-    (unless buffer-file-name
-      (with-temp-file md-file
-        (insert raw-content)))
+;;     ;; Save temp file if buffer not visiting file
+;;     (unless buffer-file-name
+;;       (with-temp-file md-file
+;;         (insert raw-content)))
     
-    ;; Generate HTML with embedded markdown
-    (with-temp-file html-file
-      (when (file-exists-p template)
-        (insert-file-contents template))
-      ;; Replace placeholder or insert script call
-      (goto-char (point-min))
-      (let ((base64-md (base64-encode-string 
-                        (encode-coding-string raw-content 'utf-8) t)))
-        (if (search-forward "<div id=\"content\">" nil t)
-            (replace-match (format "<div id=\"content\" data-markdown=\"%s\">" base64-md))
-          ;; Fallback
-          (goto-char (point-max))
-          (insert (format "\n<script>renderMarkdown('%s');</script>" base64-md)))))
+;;     ;; Generate HTML with embedded markdown
+;;     (with-temp-file html-file
+;;       (when (file-exists-p template)
+;;         (insert-file-contents template))
+;;       ;; Replace placeholder or insert script call
+;;       (goto-char (point-min))
+;;       (let ((base64-md (base64-encode-string 
+;;                         (encode-coding-string raw-content 'utf-8) t)))
+;;         (if (search-forward "<div id=\"content\">" nil t)
+;;             (replace-match (format "<div id=\"content\" data-markdown=\"%s\">" base64-md))
+;;           ;; Fallback
+;;           (goto-char (point-max))
+;;           (insert (format "\n<script>renderMarkdown('%s');</script>" base64-md)))))
     
-    ;; Open in EWW
-    (eww-open-file html-file)
-    (delete-other-windows)))
+;;     ;; Open in EWW
+;;     (eww-open-file html-file)
+;;     (delete-other-windows)))
 
 
 ;; (load "~/.emacs.d/modern-eww-style.el")
@@ -868,3 +869,107 @@ This command does not push erased text to kill-ring."
                   (looking-at ".*;.*("))
           (let ((line (thing-at-point 'line t)))
             (princ line)))))))
+
+
+;; (use-package grip-mode
+;;   :bind (:map markdown-mode-command-map
+;;          ("g" . grip-mode)))
+
+(setq markdown-command
+      "pandoc -f markdown -t html5 -s --mathjax --highlight-style=tango")
+
+(require 'valign)
+(add-hook 'markdown-mode-hook #'valign-mode)
+(setq markdown-fontify-code-blocks-natively t)
+
+(defun clear-local-mark-ring ()
+  (interactive)
+  (setq mark-ring nil)
+  (message "Local mark ring cleared"))
+
+(defun clear-global-mark-ring ()
+  (interactive)
+  (setq global-mark-ring nil)
+  (message "Global mark ring cleared"))
+
+(global-set-key (kbd "C-c M-l") #'clear-local-mark-ring)
+(global-set-key (kbd "C-c M-g") #'clear-global-mark-ring)
+
+;; ── Robust persistent highlight ─────────────────────────
+
+(defvar le/persistent-highlight-patterns nil
+  "Alist of (SYMBOL . REGEXP) for active persistent highlights.")
+(make-variable-buffer-local 'le/persistent-highlight-patterns)
+
+(defun le/symbol-at-point ()
+  "Return the symbol at point as a string, or nil."
+  (let ((bounds (bounds-of-thing-at-point 'symbol)))
+    (when bounds
+      (buffer-substring-no-properties (car bounds) (cdr bounds)))))
+
+(defvar le/hi-lock-faces
+  '(hi-yellow hi-pink hi-green hi-blue hi-red-b hi-blue-b))
+
+(defvar le/hi-lock-face-index 0)
+(make-variable-buffer-local 'le/hi-lock-face-index)
+
+(defun le/next-hi-face ()
+  (let ((face (nth le/hi-lock-face-index le/hi-lock-faces)))
+    (setq le/hi-lock-face-index
+          (mod (1+ le/hi-lock-face-index) (length le/hi-lock-faces)))
+    face))
+
+(defun le/persistent-highlight-symbol ()
+  "Highlight all occurrences of symbol at point persistently."
+  (interactive)
+  (let ((sym (le/symbol-at-point)))
+    (unless sym
+      (user-error "No symbol at point"))
+    (when (assoc sym le/persistent-highlight-patterns)
+      (user-error "Already persistently highlighted: %s" sym))
+    ;; highlight-regexp returns the actual regexp it stores
+    (let* ((face (le/next-hi-face))
+           (stored-regexp (highlight-regexp (concat "\\<" (regexp-quote sym) "\\>") face)))
+      ;; stored-regexp may be nil in older Emacs; fall back to our construction
+      (unless stored-regexp
+        (setq stored-regexp (concat "\\<" (regexp-quote sym) "\\>")))
+      (push (cons sym stored-regexp) le/persistent-highlight-patterns)
+      (message "Persistently highlighted: %s (%s)" sym face))))
+
+(defun le/persistent-unhighlight-symbol ()
+  "Remove persistent highlight for symbol at point, or prompt."
+  (interactive)
+  (let ((sym (le/symbol-at-point))
+        target entry)
+    (cond
+     ;; Symbol at point is highlighted
+     ((and sym (setq entry (assoc sym le/persistent-highlight-patterns)))
+      (setq target sym))
+     ;; Prompt from active list
+     (le/persistent-highlight-patterns
+      (setq target (completing-read "Unhighlight symbol: "
+                                    (mapcar #'car le/persistent-highlight-patterns)
+                                    nil t))
+      (setq entry (assoc target le/persistent-highlight-patterns)))
+     (t
+      (user-error "No persistent highlights in this buffer")))
+    ;; Use the EXACT stored regexp for unhighlight
+    (unhighlight-regexp (cdr entry))
+    (setq le/persistent-highlight-patterns
+          (delq entry le/persistent-highlight-patterns))
+    (message "Removed persistent highlight: %s" target)))
+
+(defun le/clear-all-persistent-highlights ()
+  "Remove every persistent highlight in current buffer."
+  (interactive)
+  (dolist (entry le/persistent-highlight-patterns)
+    (ignore-errors (unhighlight-regexp (cdr entry))))
+  (setq le/persistent-highlight-patterns nil)
+  (message "All persistent highlights cleared"))
+
+;; ── Keybindings ─────────────────────────────────────────
+(global-set-key (kbd "C-c h") #'le/persistent-highlight-symbol)
+(global-set-key (kbd "C-c H") #'le/persistent-unhighlight-symbol)
+(global-set-key (kbd "C-c M-h") #'le/clear-all-persistent-highlights)
+
+(global-hi-lock-mode 1)
