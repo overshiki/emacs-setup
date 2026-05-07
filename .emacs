@@ -1,4 +1,5 @@
 (require 'package)
+(require 'bind-key)
 
 (setq package-archives '(("gnu" . "https://mirrors.ustc.edu.cn/elpa/gnu/")
                          ("melpa" . "https://mirrors.ustc.edu.cn/elpa/melpa/")
@@ -50,7 +51,8 @@
  ;; If there is more than one, they won't work right.
  '(custom-enabled-themes '(doom-ayu-dark))
  '(custom-safe-themes
-   '("5c7720c63b729140ed88cf35413f36c728ab7c70f8cd8422d9ee1cedeb618de5"
+   '("9af2b1c0728d278281d87dc91ead7f5d9f2287b1ed66ec8941e97ab7a6ab73c0"
+     "5c7720c63b729140ed88cf35413f36c728ab7c70f8cd8422d9ee1cedeb618de5"
      "599f72b66933ea8ba6fce3ae9e5e0b4e00311c2cbf01a6f46ac789227803dd96"
      "166a2faa9dc5b5b3359f7a31a09127ebf7a7926562710367086fcc8fc72145da"
      "5244ba0273a952a536e07abaad1fdf7c90d7ebb3647f36269c23bfd1cf20b0b8"
@@ -59,25 +61,25 @@
      default))
  '(package-selected-packages
    '(auto-highlight-symbol cape clipmon cmake-mode company corfu counsel
-                           diredfl doom-themes elixir-mode
-                           futhark-mode git-gutter go-mode grip-mode
-                           gruber-darker-theme haskell-mode
-                           highlight-indent-guides
+                           dired-sidebar diredfl dirvish doom-themes
+                           eat elixir-mode futhark-mode git-gutter
+                           go-mode grip-mode gruber-darker-theme
+                           haskell-mode highlight-indent-guides
                            highlight-parentheses jedi julia-mode
                            lsp-haskell markdown-preview-mode
                            math-preview mathjax matlab-mode
-                           merlin-eldoc multiple-cursors ninja-mode
-                           racket-mode rust-mode scala-mode shrface
-                           space-theming spacemacs-theme swiper-helm
-                           term-toggle texfrag toml-mode
-                           transpose-frame tuareg valign w3m wgrep-ag
-                           yaml-mode)))
+                           merlin-eldoc msgpack multiple-cursors
+                           ninja-mode racket-mode rust-mode scala-mode
+                           shrface space-theming spacemacs-theme
+                           swiper-helm term-toggle texfrag toml-mode
+                           transpose-frame treemacs tuareg valign w3m
+                           wgrep-ag yaml-mode)))
 (custom-set-faces
  ;; custom-set-faces was added by Custom.
  ;; If you edit it by hand, you could mess it up, so be careful.
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
- '(default ((t (:family "Ubuntu Mono" :foundry "DAMA" :slant normal :weight normal :height 220 :width normal)))))
+ '(default ((t (:family "Ubuntu Mono" :foundry "DAMA" :slant normal :weight normal :height 240 :width normal)))))
 
 ;; (add-hook 'python-mode-hook 'jedi:setup)
 
@@ -94,7 +96,8 @@
 ;; (load-theme 'doom-ayu-dark :no-confirm)
 ;; (load-theme 'gruber-darker :no-confirm)
 ;; (load-theme 'doom-ayu-light :no-confirm)
-(load-theme 'doom-one-light :no-confirm)
+;; (load-theme 'doom-one-light :no-confirm)
+(load-theme 'spacemacs-light :no-confirm)
 
 ;; (use-package dired+
 ;;   :ensure t
@@ -120,12 +123,13 @@
               standard-indent 2
               )
 
-(require 'highlight-parentheses)
-(define-globalized-minor-mode global-highlight-parentheses-mode
-  highlight-parentheses-mode
-  (lambda ()
-    (highlight-parentheses-mode t)))
-(global-highlight-parentheses-mode t)
+(use-package highlight-parentheses
+  :config
+  (define-globalized-minor-mode global-highlight-parentheses-mode
+    highlight-parentheses-mode
+    (lambda ()
+      (highlight-parentheses-mode t)))
+  (global-highlight-parentheses-mode t))
 
 (global-hl-line-mode 1)
 ;; (set-face-attribute 'hl-line nil :foreground nil)
@@ -135,25 +139,29 @@
 (setq-default cursor-type 'bar)
 
 
-(add-hook 'prog-mode-hook 'highlight-indent-guides-mode)
-(global-auto-highlight-symbol-mode t)
+(use-package highlight-indent-guides
+  :hook (prog-mode . highlight-indent-guides-mode))
 
-;; (define-key global-map (kbd "C-;") 'comment-line)
+(use-package auto-highlight-symbol
+  :config
+  (global-auto-highlight-symbol-mode t))
+
+(bind-key "C-;" 'comment-line)
 
 (defun end-of-line-and-indented-new-line ()
   (interactive)
   (end-of-line)
   (newline-and-indent))
 
-(define-key global-map (kbd "C-o") 'end-of-line-and-indented-new-line)
-;; (define-key global-map (kbd "C-.") 'find-file)
-(define-key global-map (kbd "C-z") 'undo)
-(define-key global-map (kbd "C-x C-e") 'end-of-buffer)
-(define-key global-map (kbd "C-x e") 'end-of-buffer)
-(define-key global-map (kbd "C-x C-g") 'beginning-of-buffer)
-(define-key global-map (kbd "C-x g") 'beginning-of-buffer)
+(bind-key "C-o" 'end-of-line-and-indented-new-line)
+;; (bind-key "C-." 'find-file)
+(bind-key "C-z" 'undo)
+(bind-key "C-x C-e" 'end-of-buffer)
+(bind-key "C-x e" 'end-of-buffer)
+(bind-key "C-x C-g" 'beginning-of-buffer)
+(bind-key "C-x g" 'beginning-of-buffer)
 
-(define-key global-map (kbd "C-j") 'comment-line)
+(bind-key "C-j" 'comment-line)
 
 
 (setq make-backup-files nil) ; stop creating ~ files
@@ -188,14 +196,14 @@
         (push-mark (line-beginning-position) t t)
         (end-of-line)))))
 
-(global-set-key (kbd "C-l") 'xah-select-line)
+(bind-key "C-l" 'xah-select-line)
 
 (defun xah-forward-block (&optional n)
   (interactive "p")
   (let ((n (if (null n) 1 n)))
     (re-search-forward "\n[\t\n ]*\n+" nil "NOERROR" n)))
 
-(global-set-key (kbd "M-n") 'xah-forward-block)
+(bind-key "M-n" 'xah-forward-block)
 
 (defun xah-backward-block (&optional n)
   "Move cursor to previous text block.
@@ -212,14 +220,13 @@ Version 2016-06-15"
                (setq $i n)))
       (setq $i (1+ $i)))))
 
-(global-set-key (kbd "M-p") 'xah-backward-block)
+(bind-key "M-p" 'xah-backward-block)
 
-(require 'multiple-cursors)
-
-(global-set-key (kbd "C-d") 'mc/mark-next-like-this)
-(global-set-key (kbd "C-<") 'mc/mark-previous-like-this)
-(global-set-key (kbd "C-c C-<") 'mc/mark-all-like-this)
-;; (global-set-key (kbd "C-i") 'kill-ring-save)
+(use-package multiple-cursors
+  :bind (("C-c C-d" . mc/mark-next-like-this)
+         ("C-<" . mc/mark-previous-like-this)
+         ("C-c C-<" . mc/mark-all-like-this)))
+(bind-key "C-i" 'kill-ring-save)
 
 
 ;; https://stackoverflow.com/questions/28221079/ctrl-backspace-in-emacs-deletes-too-much
@@ -238,7 +245,7 @@ This command does not push erased text to kill-ring."
 ;;   (interactive "p")
 ;;   (my-delete-word (- arg)))
 
-;; (global-set-key [C-backspace] 'my-backward-delete-word)
+(bind-key "C-<backspace>" 'my-backward-delete-word)
 
 ;; (defun le/backward-delete-word (arg)
 ;;   (interactive "p")
@@ -285,7 +292,7 @@ This command does not push erased text to kill-ring."
         (delete-region start stop)
       )))
 
-(global-set-key [C-backspace] 'le/backward-kill-word-stop-at-newline)
+(bind-key "C-<backspace>" 'le/backward-kill-word-stop-at-newline)
 
 
 (defun le/forward-word-stop-at-newline (arg)
@@ -345,25 +352,22 @@ This command does not push erased text to kill-ring."
 
 (provide 'move-text)
 
-(global-set-key (kbd "C-S-P") 'move-text-up)
-(global-set-key (kbd "C-S-N") 'move-text-down)
+(bind-key "C-S-P" 'move-text-up)
+(bind-key "C-S-N" 'move-text-down)
 
 
-(global-set-key (kbd "C-S-<up>") 'move-text-up)
-(global-set-key (kbd "C-S-<down>") 'move-text-down)
+(bind-key "C-S-<up>" 'move-text-up)
+(bind-key "C-S-<down>" 'move-text-down)
 
-;; (global-set-key (kbd "<M-up>") 'move-text-up)
-;; (global-set-key (kbd "<M-down>") 'move-text-down)
+(bind-key "<M-up>" 'move-text-up)
+(bind-key "<M-down>" 'move-text-down)
 
 ;; lsp
 ;; ;; use eglot instead
 ;; language servers
-(require 'lsp)
-(require 'lsp-haskell)
-;; Hooks so haskell and literate haskell major modes trigger LSP setup
-;; (add-hook 'haskell-mode-hook #'lsp)
-;; (add-hook 'haskell-literate-mode-hook #'lsp)
 
+(use-package lsp
+  :commands (lsp lsp-deferred))
 
 (defun haskell-format-buffer-with-ormolu ()
   "Format the current Haskell buffer using ormolu."
@@ -372,34 +376,34 @@ This command does not push erased text to kill-ring."
     (save-excursion
       (shell-command-on-region (point-min) (point-max) "ormolu" (current-buffer) t))))
 
+(use-package lsp-haskell
+  :after lsp
+  :hook ((haskell-mode . lsp)
+         (haskell-literate-mode . lsp))
+  :init
+  (add-hook 'haskell-mode-hook
+            (lambda ()
+              (add-hook 'before-save-hook 'haskell-format-buffer-with-ormolu nil t))))
 
-(add-hook 'haskell-mode-hook
-          (lambda ()
-            (add-hook 'before-save-hook 'haskell-format-buffer-with-ormolu nil t)))
+(use-package auto-complete
+  :config
+  (add-hook 'interactive-haskell-mode-hook 'ac-haskell-process-setup)
+  (add-hook 'haskell-interactive-mode-hook 'ac-haskell-process-setup)
+  (add-to-list 'ac-modes 'haskell-interactive-mode))
 
-
-;; auto-complete
-(add-hook 'interactive-haskell-mode-hook 'ac-haskell-process-setup)
-(add-hook 'haskell-interactive-mode-hook 'ac-haskell-process-setup)
-(eval-after-load "auto-complete"
-  '(add-to-list 'ac-modes 'haskell-interactive-mode))
-
-
+(use-package flymake
+  :hook (flymake-mode . (lambda ()
+                          (setq flymake-suppress-zero-counters t)
+                          (setq flymake-start-on-flymake-mode t)
+                          (flymake-mode 1))))
 
 ;; (use-package lsp-mode
 ;;   :hook (python-mode . lsp)
 ;;   :config
 ;;   (setq lsp-pyls-server-command '("pylsp")))
 
-
-(add-hook 'flymake-mode-hook
-          (lambda ()
-            (setq flymake-suppress-zero-counters t)
-            (setq flymake-start-on-flymake-mode t)
-            (flymake-mode 1)))
-
 (use-package lsp-ui
-  :after lsp-mode
+  :after lsp
   :hook (lsp-mode . lsp-ui-mode)
   :config
   (setq lsp-ui-sideline-enable t
@@ -409,23 +413,21 @@ This command does not push erased text to kill-ring."
             
           
 
-(define-key global-map (kbd "C-x p") 'previous-buffer)
-(define-key global-map (kbd "C-x n") 'next-buffer)
-(define-key global-map (kbd "C-x C-p") 'previous-buffer)
-(define-key global-map (kbd "C-x C-n") 'next-buffer)
+(bind-key "C-x p" 'previous-buffer)
+(bind-key "C-x C-p" 'previous-buffer)
+(bind-key "C-x C-n" 'next-buffer)
 
-(define-key global-map (kbd "C-M-]") 'term-toggle-shell)
-(define-key global-map (kbd "C-`") 'term-toggle-shell)
+(bind-key "C-M-]" 'term-toggle-shell)
+(bind-key "C-`" 'term-toggle-shell)
 
-(define-key global-map (kbd "C-s") 'swiper-thing-at-point)
-(define-key global-map (kbd "M-s") 'counsel-ag)
-;; (define-key global-map (kbd "C-s") 'save-buffer)
+(bind-key "C-s" 'swiper-thing-at-point)
+(bind-key "M-s" 'counsel-ag)
 
 
-(define-key global-map (kbd "C-k") 'kill-line)
-(define-key global-map (kbd "M-k") 'kill-region)
-;; (global-set-key (kbd "TAB") 'tab-to-tab-stop)
-(global-set-key (kbd "TAB") (lambda () (interactive) (insert "  ")))
+(bind-key "C-k" 'kill-line)
+(bind-key "M-k" 'kill-region)
+(bind-key "TAB" 'tab-to-tab-stop)
+(bind-key "TAB" (lambda () (interactive) (insert "  ")))
 ;; (setq-default indent-tabs-mode nil)
 								
 ;; (global-whitespace-mode 1)
@@ -463,28 +465,32 @@ This command does not push erased text to kill-ring."
       (skip-syntax-forward "^w"))))
 
 
-;; (global-set-key (kbd "C-<right>") 'forward-to-separator)
-;; (global-set-key (kbd "C-<left>") 'backward-to-separator)
-;; (global-set-key (kbd "M-f") 'forward-to-separator)
-;; (global-set-key (kbd "M-b") 'backward-to-separator)
+(bind-key "C-<right>" 'forward-to-separator)
+(bind-key "C-<left>" 'backward-to-separator)
+(bind-key "M-f" 'forward-to-separator)
+(bind-key "M-b" 'backward-to-separator)
 
 
-;; (global-set-key (kbd "C-<right>") 'my-forward-word-or-other)
-(global-set-key (kbd "C-<right>") 'le/forward-word-stop-at-newline)
-(global-set-key (kbd "C-<left>") 'my-backward-word-or-other)
-;; (global-set-key (kbd "M-f") 'my-forward-word-or-other)
-(global-set-key (kbd "M-f") 'forward-char)
-(global-set-key (kbd "C-f") 'le/forward-word-stop-at-newline)
-(global-set-key (kbd "M-b") 'backward-char)
-(global-set-key (kbd "C-b") 'my-backward-word-or-other)
+(bind-key "C-<right>" 'my-forward-word-or-other)
+(bind-key "C-<right>" 'le/forward-word-stop-at-newline)
+(bind-key "C-<left>" 'my-backward-word-or-other)
+(bind-key "M-f" 'my-forward-word-or-other)
+(bind-key "M-f" 'forward-char)
+(bind-key "C-f" 'le/forward-word-stop-at-newline)
+(bind-key "M-b" 'backward-char)
+(bind-key "C-b" 'my-backward-word-or-other)
 
 
-(ivy-mode t)
 ;; (require 'ido)
 ;; (ido-mode t)
 
-(company-mode t)  ;; auto-completion
-(add-hook 'after-init-hook 'global-company-mode)
+(use-package ivy
+  :config
+  (ivy-mode t)
+  (setopt ivy-use-selectable-prompt t))
+
+(use-package company
+  :hook (after-init . global-company-mode))
 
 ;; ;; use lsp instead
 ;; (add-hook 'haskell-mode-hook 'eglot-ensure)
@@ -492,8 +498,9 @@ This command does not push erased text to kill-ring."
 ;; (add-hook 'racket-mode-hook 'eglot-ensure)
 
 
-(setopt ivy-use-selectable-prompt t)
-(global-git-gutter-mode +1)
+(use-package git-gutter
+  :config
+  (global-git-gutter-mode +1))
 
 (unless (file-exists-p "~/.emacs.d/tmp/tramp-autosaves/")
   (make-directory "~/.emacs.d/tmp/tramp-autosaves/" t))
@@ -525,8 +532,8 @@ This command does not push erased text to kill-ring."
 ;; ;; (bind-key "C-M-P"  'kb-scroll-up-hold-cursor)
 ;; ;; (bind-key "C-M-N"  'kb-scroll-down-hold-cursor)
 
-;; (global-set-key (kbd "<C-M-up>") 'kb-scroll-up-hold-cursor)
-;; (global-set-key (kbd "<C-M-down>") 'kb-scroll-down-hold-cursor)
+(bind-key "<C-M-up>" 'kb-scroll-up-hold-cursor)
+(bind-key "<C-M-down>" 'kb-scroll-down-hold-cursor)
 
 (defun kb-scroll-up-hold-cursor ()
   "Scroll up one position in file."
@@ -541,15 +548,15 @@ This command does not push erased text to kill-ring."
   (forward-line -1))
 
 
-;; (global-set-key (kbd "M-p") 'kb-scroll-up-hold-cursor)
-;; (global-set-key (kbd "M-n") 'kb-scroll-down-hold-cursor)
+(bind-key "M-p" 'kb-scroll-up-hold-cursor)
+(bind-key "M-n" 'kb-scroll-down-hold-cursor)
 
-(global-set-key (kbd "M-<up>") 'kb-scroll-down-hold-cursor)
-(global-set-key (kbd "M-<down>") 'kb-scroll-up-hold-cursor)
+(bind-key "M-<up>" 'kb-scroll-down-hold-cursor)
+(bind-key "M-<down>" 'kb-scroll-up-hold-cursor)
 
-(global-set-key (kbd "M-w") 'kill-region)
-(global-set-key (kbd "C-w") 'kill-ring-save)
-(global-set-key (kbd "C-v") 'yank)
+(bind-key "M-w" 'kill-region)
+(bind-key "C-w" 'kill-ring-save)
+(bind-key "C-v" 'yank)
 
 (setq inhibit-startup-screen t)
 
@@ -568,7 +575,10 @@ This command does not push erased text to kill-ring."
   ;; and use one of its "OPSW" menus.
   ))
 
-(merlin-eldoc-setup)
+(use-package merlin-eldoc
+  :after merlin
+  :config
+  (merlin-eldoc-setup))
 
 
 (defvar dired-jump-history nil
@@ -624,11 +634,14 @@ This command does not push erased text to kill-ring."
    (t (message "No previous location"))))
 
 ;; Keybindings
-(global-set-key (kbd "C-x C-<up>") #'dired-jump-to-current-dir)
-(global-set-key (kbd "C-x C-<down>") #'jump-back-from-dired)
+(bind-key "C-x C-<up>" #'dired-jump-to-current-dir)
+(bind-key "C-x C-<down>" #'jump-back-from-dired)
 
-(global-set-key (kbd "C-x <up>") #'dired-jump-to-current-dir)
-(global-set-key (kbd "C-x <down>") #'jump-back-from-dired)
+(bind-key "C-x <up>" #'dired-jump-to-current-dir)
+(bind-key "C-x <down>" #'jump-back-from-dired)
+
+(bind-key "C-x u" #'dired-jump-to-current-dir)
+(bind-key "C-x n" #'jump-back-from-dired)
 
 (defun copy-token-to-clipboard ()
   "Read first line from ~/.token and copy to clipboard."
@@ -646,7 +659,7 @@ This command does not push erased text to kill-ring."
       (error "Token file not found: %s" token-file))))
 
 ;; Bind to C-c t (or choose your own)
-(global-set-key (kbd "C-c t") 'copy-token-to-clipboard)
+(bind-key "C-c t" 'copy-token-to-clipboard)
 
 (require 'json)
 
@@ -665,11 +678,12 @@ This command does not push erased text to kill-ring."
            `((user . ,user) (host . ,ip) (secret . ,passwd))))
       (auth-source-remember '(:host ,ip :user ,user :protocol "ssh")
                             `((secret . ,passwd))))
-    (find-file (format "/ssh:%s@%s:~/" user ip))
+    ;; (find-file (format "/ssh:%s@%s:~/" user ip))
+    (find-file (format "/rpc:%s@%s:~/" user ip))
     (message "Connecting to %s@%s..." user ip)))
 
 ;; Bind to C-c S
-(global-set-key (kbd "C-c S") 'ssh-login-from-config)
+(bind-key "C-c S" 'ssh-login-from-config)
 
 (defun my-dired-file-split-layout ()
   "Split window: left 1/3 Dired (current dir), right 2/3 current file."
@@ -695,8 +709,6 @@ This command does not push erased text to kill-ring."
         (when current-file
           (switch-to-buffer current-buffer))))))
 
-;; Bind to C-c 3
-(global-set-key (kbd "C-c 3") #'my-dired-file-split-layout)
 
 (defun my-toggle-split-layout ()
   "Toggle between split layout and single window."
@@ -705,7 +717,7 @@ This command does not push erased text to kill-ring."
       (my-dired-file-split-layout)
     (delete-other-windows)))
 
-(global-set-key (kbd "C-c 3") #'my-toggle-split-layout)
+(bind-key "C-c 3" #'my-toggle-split-layout)
 
 
 (defun next-file-by-extension ()
@@ -749,19 +761,20 @@ This command does not push erased text to kill-ring."
      ((not prev) (message "No previous .%s file" ext))
      (t (find-file (expand-file-name prev dir))))))
 
-;; Bindings
-(with-eval-after-load 'markdown-mode
-  (define-key markdown-mode-map (kbd "C-c C-c <down>") #'next-file-by-extension)
-  (define-key markdown-mode-map (kbd "C-c C-c <up>") #'prev-file-by-extension))
+(use-package markdown-mode
+  :mode (("\\.md\\'" . markdown-mode)
+         ("\\.markdown\\'" . markdown-mode))
+  :bind (:map markdown-mode-map
+              ("C-c C-c <down>" . next-file-by-extension)
+              ("C-c C-c <up>" . prev-file-by-extension))
+  :config
+  (setq markdown-command "pandoc -f markdown -t html5 -s --mathjax --highlight-style=tango")
+  (setq markdown-fontify-code-blocks-natively t))
 
 ;; ========== markdown-preview-mode Configuration ==========
 ;; ============================================
 ;; Configuration
 ;; ============================================
-
-;; Auto-mode for .md files
-(add-to-list 'auto-mode-alist '("\\.md\\'" . markdown-mode))
-(add-to-list 'auto-mode-alist '("\\.markdown\\'" . markdown-mode))
 
 
 ;; (setq markdown-preview--preview-template
@@ -856,31 +869,17 @@ This command does not push erased text to kill-ring."
 
 
 (defun my-show-init-bindings ()
-  "Show active key bindings from init file, skipping commented lines."
+  "Show personal key bindings via bind-key."
   (interactive)
-  (with-current-buffer (find-file-noselect user-init-file)
-    (goto-char (point-min))
-    (with-output-to-temp-buffer "*My Key Bindings*"
-      (princ "Active Key Bindings:\n\n")
-      (while (re-search-forward "^(\\s-*\\(global-set-key\\|define-key\\)" nil t)
-        ;; Check if line is commented (semicolon before open paren)
-        (unless (save-excursion
-                  (beginning-of-line)
-                  (looking-at ".*;.*("))
-          (let ((line (thing-at-point 'line t)))
-            (princ line)))))))
+  (describe-personal-keybindings))
 
 
 ;; (use-package grip-mode
 ;;   :bind (:map markdown-mode-command-map
 ;;          ("g" . grip-mode)))
 
-(setq markdown-command
-      "pandoc -f markdown -t html5 -s --mathjax --highlight-style=tango")
-
-(require 'valign)
-(add-hook 'markdown-mode-hook #'valign-mode)
-(setq markdown-fontify-code-blocks-natively t)
+(use-package valign
+  :hook (markdown-mode . valign-mode))
 
 (defun clear-local-mark-ring ()
   (interactive)
@@ -892,14 +891,23 @@ This command does not push erased text to kill-ring."
   (setq global-mark-ring nil)
   (message "Global mark ring cleared"))
 
-(global-set-key (kbd "C-c M-l") #'clear-local-mark-ring)
-(global-set-key (kbd "C-c M-g") #'clear-global-mark-ring)
+(bind-key "C-c M-l" #'clear-local-mark-ring)
+(bind-key "C-c M-g" #'clear-global-mark-ring)
 
-;; ── Robust persistent highlight ─────────────────────────
 
-(defvar le/persistent-highlight-patterns nil
-  "Alist of (SYMBOL . REGEXP) for active persistent highlights.")
-(make-variable-buffer-local 'le/persistent-highlight-patterns)
+;; ── Color Ring with Resource Reclamation ─────────────────
+
+(defvar le/hi-lock-faces
+  '(hi-yellow hi-pink hi-green hi-blue hi-red-b hi-blue-b)
+  "Available faces in the ring, in order.")
+
+(defvar le/face-ring-allocated nil
+  "List of plists (:face FACE :symbol SYMBOL :regexp REGEXP) tracking in-use colors.")
+(make-variable-buffer-local 'le/face-ring-allocated)
+
+(defvar le/face-ring-next-idx 0
+  "Next index to try in the ring (circular).")
+(make-variable-buffer-local 'le/face-ring-next-idx)
 
 (defun le/symbol-at-point ()
   "Return the symbol at point as a string, or nil."
@@ -907,69 +915,272 @@ This command does not push erased text to kill-ring."
     (when bounds
       (buffer-substring-no-properties (car bounds) (cdr bounds)))))
 
-(defvar le/hi-lock-faces
-  '(hi-yellow hi-pink hi-green hi-blue hi-red-b hi-blue-b))
+(defun le/find-entry-by-symbol (sym)
+  "Find entry in le/face-ring-allocated where :symbol equals SYM."
+  (cl-find-if (lambda (entry) (equal (plist-get entry :symbol) sym))
+              le/face-ring-allocated))
 
-(defvar le/hi-lock-face-index 0)
-(make-variable-buffer-local 'le/hi-lock-face-index)
+(defun le/allocate-face ()
+  "Find next available face in ring. Return face or error if full."
+  (let ((n (length le/hi-lock-faces))
+        (start le/face-ring-next-idx)
+        (idx le/face-ring-next-idx)
+        found)
+    (while (and (not found) (< (- idx start) n))
+      (let ((face (nth (mod idx n) le/hi-lock-faces)))
+        (unless (cl-find-if (lambda (e) (eq (plist-get e :face) face))
+                            le/face-ring-allocated)
+          (setq found face)))
+      (setq idx (1+ idx)))
+    (unless found
+      (user-error "Color ring full (%d/%d). Unhighlight something first."
+                  (length le/face-ring-allocated) n))
+    (setq le/face-ring-next-idx (mod idx n))
+    found))
 
-(defun le/next-hi-face ()
-  (let ((face (nth le/hi-lock-face-index le/hi-lock-faces)))
-    (setq le/hi-lock-face-index
-          (mod (1+ le/hi-lock-face-index) (length le/hi-lock-faces)))
-    face))
+(defun le/release-face (face)
+  "Release FACE back to ring. Update next-idx to prefer this slot."
+  (setq le/face-ring-allocated
+        (cl-remove-if (lambda (e) (eq (plist-get e :face) face))
+                      le/face-ring-allocated))
+  (let ((idx (cl-position face le/hi-lock-faces)))
+    (when idx
+      (setq le/face-ring-next-idx idx)))
+  face)
 
 (defun le/persistent-highlight-symbol ()
-  "Highlight all occurrences of symbol at point persistently."
+  "Highlight symbol at point using next available color from ring."
   (interactive)
   (let ((sym (le/symbol-at-point)))
     (unless sym
       (user-error "No symbol at point"))
-    (when (assoc sym le/persistent-highlight-patterns)
+    (when (le/find-entry-by-symbol sym)
       (user-error "Already persistently highlighted: %s" sym))
-    ;; highlight-regexp returns the actual regexp it stores
-    (let* ((face (le/next-hi-face))
+    (let* ((face (le/allocate-face))
            (stored-regexp (highlight-regexp (concat "\\<" (regexp-quote sym) "\\>") face)))
-      ;; stored-regexp may be nil in older Emacs; fall back to our construction
       (unless stored-regexp
         (setq stored-regexp (concat "\\<" (regexp-quote sym) "\\>")))
-      (push (cons sym stored-regexp) le/persistent-highlight-patterns)
+      (push (list :face face :symbol sym :regexp stored-regexp) le/face-ring-allocated)
       (message "Persistently highlighted: %s (%s)" sym face))))
 
 (defun le/persistent-unhighlight-symbol ()
-  "Remove persistent highlight for symbol at point, or prompt."
+  "Remove highlight and reclaim its color."
   (interactive)
   (let ((sym (le/symbol-at-point))
-        target entry)
+        entry)
     (cond
      ;; Symbol at point is highlighted
-     ((and sym (setq entry (assoc sym le/persistent-highlight-patterns)))
-      (setq target sym))
+     ((and sym (setq entry (le/find-entry-by-symbol sym)))
+      (setq sym (plist-get entry :symbol)))
      ;; Prompt from active list
-     (le/persistent-highlight-patterns
-      (setq target (completing-read "Unhighlight symbol: "
-                                    (mapcar #'car le/persistent-highlight-patterns)
-                                    nil t))
-      (setq entry (assoc target le/persistent-highlight-patterns)))
+     (le/face-ring-allocated
+      (setq sym (completing-read "Unhighlight symbol: "
+                                 (mapcar (lambda (e) (plist-get e :symbol))
+                                         le/face-ring-allocated)
+                                 nil t))
+      (setq entry (le/find-entry-by-symbol sym)))
      (t
       (user-error "No persistent highlights in this buffer")))
-    ;; Use the EXACT stored regexp for unhighlight
-    (unhighlight-regexp (cdr entry))
-    (setq le/persistent-highlight-patterns
-          (delq entry le/persistent-highlight-patterns))
-    (message "Removed persistent highlight: %s" target)))
+    ;; Unhighlight using stored regexp, release face
+    (let ((face (plist-get entry :face))
+          (regexp (plist-get entry :regexp)))
+      (unhighlight-regexp regexp)
+      (le/release-face face)
+      (message "Removed persistent highlight: %s (reclaimed %s)" sym face))))
 
 (defun le/clear-all-persistent-highlights ()
-  "Remove every persistent highlight in current buffer."
+  "Remove all highlights, fully reset ring."
   (interactive)
-  (dolist (entry le/persistent-highlight-patterns)
-    (ignore-errors (unhighlight-regexp (cdr entry))))
-  (setq le/persistent-highlight-patterns nil)
-  (message "All persistent highlights cleared"))
+  (dolist (entry le/face-ring-allocated)
+    (ignore-errors (unhighlight-regexp (plist-get entry :regexp))))
+  (setq le/face-ring-allocated nil)
+  (setq le/face-ring-next-idx 0)
+  (message "All persistent highlights cleared, ring reset"))
 
 ;; ── Keybindings ─────────────────────────────────────────
-(global-set-key (kbd "C-c h") #'le/persistent-highlight-symbol)
-(global-set-key (kbd "C-c H") #'le/persistent-unhighlight-symbol)
-(global-set-key (kbd "C-c M-h") #'le/clear-all-persistent-highlights)
+(bind-key "C-c h" #'le/persistent-highlight-symbol)
+(bind-key "C-c H" #'le/persistent-unhighlight-symbol)
+(bind-key "C-c M-h" #'le/clear-all-persistent-highlights)
 
 (global-hi-lock-mode 1)
+
+(defun my-dired-search-to-buffer ()
+  "Search files in current Dired directory and show results in a temp buffer.
+Uses ripgrep if available, falls back to grep. Shows relative paths and highlights matches."
+  (interactive)
+  (let* ((dir (dired-current-directory))
+         (default-directory dir)
+         (prompt (format "Search in %s: " (abbreviate-file-name dir)))
+         (pattern (read-string prompt))
+         (buf (get-buffer-create "*Dired Search Results*"))
+         (pattern-re (regexp-quote pattern)))
+    (when (string-empty-p pattern)
+      (user-error "Empty search pattern"))
+    (with-current-buffer buf
+      (setq buffer-read-only nil)
+      (erase-buffer)
+      (insert (propertize (format "Search: %s\nDirectory: %s\n%s\n\n"
+                                  pattern (abbreviate-file-name dir)
+                                  (make-string 50 ?-))
+                          'face 'bold))
+      (let ((cmd (if (executable-find "rg")
+                     (format "rg -nH --color=never --sort path -e %s"
+                             (shell-quote-argument pattern))
+                   (format "grep -rnH -I -e %s"
+                           (shell-quote-argument pattern)))))
+        (call-process-shell-command cmd nil t))
+      ;; Setup compilation-mode for clickable links first
+      (compilation-mode)
+      (setq-local compilation-error-regexp-alist
+                  '(("^\\([^:\n]+\\):\\([0-9]+\\):" 1 2)))
+      ;; Add persistent keyword highlighting for the search pattern
+      (font-lock-add-keywords nil `((,pattern-re 0 'hi-yellow prepend)) 'append)
+      (font-lock-flush)
+      (font-lock-ensure))
+    (pop-to-buffer buf)
+    (goto-char (point-min))
+    (forward-line 4)))
+
+(use-package dired
+  :bind (:map dired-mode-map
+              ("C-c s" . my-dired-search-to-buffer)))
+
+
+(defvar my-toggle-themes '(spacemacs-light doom-one-light doom-ayu-dark)
+  "List of two themes to toggle between.")
+
+(defun my-toggle-theme ()
+  "Toggle between the two themes in `my-toggle-themes'."
+  (interactive)
+  (let* ((current (car custom-enabled-themes))
+         (next (if (eq current (car my-toggle-themes))
+                   (cadr my-toggle-themes)
+                 (car my-toggle-themes))))
+    (mapc #'disable-theme custom-enabled-themes)
+    (load-theme next t)
+    (message "Switched to %s" next)))
+
+;; Bind to a convenient key, e.g., C-c t
+(bind-key "C-x t" #'my-toggle-theme)
+
+(add-to-list 'load-path (expand-file-name "~/lang/elisp/tramp-2.8.1.3"))
+(use-package tramp)
+
+(add-to-list 'load-path (expand-file-name "~/lang/elisp/emacs-tramp-rpc/lisp"))
+(use-package tramp-rpc
+  :after tramp)
+
+(defun copy-file-path-to-clipboard ()
+  "Copy the absolute path of the current buffer's file to the system clipboard."
+  (interactive)
+  (if-let ((path (buffer-file-name)))
+      (progn
+        (kill-new path)
+        (message "Copied: %s" path))
+    (message "No file associated with this buffer")))
+
+;; Bind to C-c p
+(bind-key "C-c p" #'copy-file-path-to-clipboard)
+
+(defun ivy-jump-to-project-doc ()
+  "Find project root via .git, then jump to README.md or CHANGELOG.md with ivy."
+  (interactive)
+  (let* ((root (locate-dominating-file default-directory ".git"))
+         (files (when root
+                  (directory-files root t "^\\(README\\|CHANGELOG\\)\\.md$"))))
+    (if (not root)
+        (message "No .git found")
+      (if (null files)
+          (message "No README.md or CHANGELOG.md in %s" root)
+        (ivy-read "Project doc: "
+                  (mapcar (lambda (f) (cons (file-name-nondirectory f) f)) files)
+                  :action (lambda (x) (find-file (cdr x)))
+                  :caller 'ivy-jump-to-project-doc)))))
+
+;; Bind it
+(bind-key "C-c d" #'ivy-jump-to-project-doc)
+
+(defvar my-help-messages-alist
+  '(("pip ustc" . "-i https://mirrors.ustc.edu.cn/pypi/simple")
+    ("Git force push" . "git push --force-with-lease")
+    ("Docker prune" . "docker system prune -a")
+    ("Python venv" . "python -m venv .venv && source .venv/bin/activate")
+    ("CMake build" . "cmake -B build -S . && cmake --build build"))
+  "Alist of (LABEL . COMMAND) for quick help lookup.")
+
+(defun ivy-copy-help-message ()
+  "Select a help message from `my-help-messages-alist' via ivy and copy to clipboard."
+  (interactive)
+  (ivy-read "Help: "
+            my-help-messages-alist
+            :action (lambda (x)
+                      (let ((msg (cdr x)))
+                        (kill-new msg)
+                        (message "Copied: %s" msg)))
+            :caller 'ivy-copy-help-message))
+
+;; Bind it
+(bind-key "C-c C-x h" #'ivy-copy-help-message)
+
+(bind-key "C-c k" #'describe-personal-keybindings)
+
+(add-to-list 'load-path "/home/le/lang/elisp/emacs-libvterm")
+(require 'vterm)
+
+(defvar my/vterm-toggle-buffer-name "*vterm-toggle*"
+  "Name of the dedicated toggle vterm buffer.")
+
+(defun my/vterm-toggle ()
+  "Toggle a dedicated vterm buffer in a bottom window."
+  (interactive)
+  (let ((buffer (get-buffer my/vterm-toggle-buffer-name))
+        (window (get-buffer-window my/vterm-toggle-buffer-name)))
+    (cond
+     ;; Visible: hide it
+     (window
+      (delete-window window))
+     ;; Hidden but exists: show in bottom split
+     (buffer
+      (let ((win (split-window-below -15)))
+        (select-window win)
+        (switch-to-buffer buffer)))
+     ;; Doesn't exist: create
+     (t
+      (let ((win (split-window-below -15)))
+        (select-window win)
+        (vterm my/vterm-toggle-buffer-name))))))
+
+;; Optional: kill the buffer when shell exits to avoid stale state
+(add-hook 'vterm-exit-functions
+          (lambda (buffer)
+            (when (string= (buffer-name buffer) my/vterm-toggle-buffer-name)
+              (kill-buffer buffer))))
+
+(global-set-key (kbd "C-`") #'my/vterm-toggle)
+
+(add-to-list 'load-path "/home/le/lang/elisp/emacs-tramp-tunnel")
+(require 'tramp-proxy)
+
+(setq tramp-proxy-host "root@159.138.146.1")
+
+(with-eval-after-load 'eat
+  (define-key eat-semi-char-mode-map (kbd "C-c C-e") #'eat-emacs-mode)
+  (define-key eat-mode-map (kbd "C-c C-e") #'eat-semi-char-mode))
+
+
+(defvar my-tramp-rpc-local-terminals t
+  "When non-nil, open terminal emulators locally even in TRAMP-RPC buffers.")
+
+(defun my-tramp-rpc-local-terminal-advice (orig-fun &rest args)
+  "Run terminal emulator with local `default-directory'."
+  (if (and my-tramp-rpc-local-terminals
+           (boundp 'tramp-rpc-method)
+           (file-remote-p default-directory)
+           (string-prefix-p "/rpc:" (expand-file-name default-directory)))
+      (let ((default-directory (expand-file-name "~")))
+        (apply orig-fun args))
+    (apply orig-fun args)))
+
+;; Advise terminal emulators
+(with-eval-after-load 'eat
+  (advice-add 'eat :around #'my-tramp-rpc-local-terminal-advice))

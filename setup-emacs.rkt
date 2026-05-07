@@ -18,11 +18,21 @@
  
 (system "emacs --script install.el")
 
-;; (define markdown-preview-src "markdown-preview-mode")
-;; (define markdown-preview-dest (build-path emacs-d-dir "markdown-preview-mode"))
+;; Install tramp and tramp-rpc to ~/lang/elisp
+(system "mkdir -p ~/lang/elisp")
 
-(define eww-style-tgt "~/.emacs.d/modern-eww-style.el")
-(define eww-style-src "./modern-eww-style.el")
+;; Download and extract tramp 2.8.1.3
+(system "wget -c https://ftp.gnu.org/gnu/tramp/tramp-2.8.1.3.tar.gz -O /tmp/tramp-2.8.1.3.tar.gz")
+(system "cd ~/lang/elisp && tar -xzf /tmp/tramp-2.8.1.3.tar.gz")
+
+;; Clone emacs-tramp-rpc
+(system "cd ~/lang/elisp && git clone https://github.com/ArthurHeymans/emacs-tramp-rpc.git || true")
+
+;; Build tramp-rpc Rust server
+(when (not (system "which cargo > /dev/null 2>&1"))
+  (display "Installing Rust via rustup...\n")
+  (system "curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y"))
+(system ". \"$HOME/.cargo/env\" 2>/dev/null; cd ~/lang/elisp/emacs-tramp-rpc/server && cargo build --release")
 
 (define emacs-src ".emacs")
 
@@ -44,18 +54,3 @@
       (printf "~a copied successfully to ~a~n" emacs-src emacs-file))
     (printf "Warning: ~a source file not found!~n" emacs-src))
 
-;; Copy modern-eww-style.el into ~/.emacs.d/ 
-(copy-file eww-style-src eww-style-tgt)
-
-;; ;; Copy markdown-preview-mode to .emacs.d
-;; (if (directory-exists? markdown-preview-src)
-;;     (begin
-;;       (printf "Copying ~a to ~a...~n" markdown-preview-src markdown-preview-dest)
-;;       ;; Remove destination if it already exists
-;;       (when (directory-exists? markdown-preview-dest)
-;;         (printf "Destination ~a already exists, removing old version...~n" markdown-preview-dest)
-;;         (delete-directory/files markdown-preview-dest))
-;;       ;; Copy the directory
-;;       (copy-directory/files markdown-preview-src markdown-preview-dest)
-;;       (printf "~a copied successfully to ~a~n" markdown-preview-src markdown-preview-dest))
-;;     (printf "Error: ~a source directory not found!~n" markdown-preview-src))
