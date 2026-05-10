@@ -93,11 +93,11 @@
 
 ;; I prefer no theme in the end
 ;; (load-theme 'doom-dark+ :no-confirm)
-;; (load-theme 'doom-ayu-dark :no-confirm)
+(load-theme 'doom-ayu-dark :no-confirm)
 ;; (load-theme 'gruber-darker :no-confirm)
 ;; (load-theme 'doom-ayu-light :no-confirm)
 ;; (load-theme 'doom-one-light :no-confirm)
-(load-theme 'spacemacs-light :no-confirm)
+;; (load-theme 'spacemacs-light :no-confirm)
 
 ;; (use-package dired+
 ;;   :ensure t
@@ -664,24 +664,28 @@ This command does not push erased text to kill-ring."
 (require 'json)
 
 (defun ssh-login-from-config ()
-  "Read ~/.server JSON (user, ip), prompt for password, login via TRAMP."
+  "Read ~/.server JSON with multiple servers, select via ivy, prompt for password, login via TRAMP."
   (interactive)
   (let* ((config-file (expand-file-name "~/.server"))
          (json-data (json-read-file config-file))
-         (user (cdr (assoc 'user json-data)))
-         (ip (cdr (assoc 'ip json-data)))
+         (servers (mapcar (lambda (entry)
+                            (cons (symbol-name (car entry)) (cdr entry)))
+                          json-data))
+         (server-name (ivy-read "Server: " (mapcar #'car servers)))
+         (server-config (cdr (assoc server-name servers)))
+         (user (cdr (assoc 'user server-config)))
+         (ip (cdr (assoc 'ip server-config)))
          (passwd (read-passwd (format "Password for %s@%s: " user ip))))
     (when (or (null user) (null ip))
-      (error "Missing 'user' or 'ip' in ~/.server"))
+      (error "Missing 'user' or 'ip' for server %s" server-name))
     ;; Temporarily cache password for this TRAMP session
     (let ((auth-source-creation-prompts
            `((user . ,user) (host . ,ip) (secret . ,passwd))))
-      (auth-source-remember '(:host ,ip :user ,user :protocol "ssh")
+      (auth-source-remember `(:host ,ip :user ,user :protocol "ssh")
                             `((secret . ,passwd))))
-    ;; (find-file (format "/ssh:%s@%s:~/" user ip))
-    (find-file (format "/rpc:%s@%s:~/" user ip))
+    ;; (find-file (format "/ssh:%s@%s:/" user ip))
+    (find-file (format "/rpc:%s@%s:/" user ip))
     (message "Connecting to %s@%s..." user ip)))
-
 ;; Bind to C-c S
 (bind-key "C-c S" 'ssh-login-from-config)
 
@@ -769,83 +773,21 @@ This command does not push erased text to kill-ring."
               ("C-c C-c <up>" . prev-file-by-extension))
   :config
   (setq markdown-command "pandoc -f markdown -t html5 -s --mathjax --highlight-style=tango")
-  (setq markdown-fontify-code-blocks-natively t))
+  (setq markdown-fontify-code-blocks-natively t)
 
-;; ========== markdown-preview-mode Configuration ==========
-;; ============================================
-;; Configuration
-;; ============================================
+  (defun my/adjust-markdown-faces-for-theme (&rest _)
+    "Adjust markdown code block background based on active theme."
+    (if (member 'spacemacs-light custom-enabled-themes)
+        (progn
+          (set-face-attribute 'markdown-code-face nil :background "#f2f2f2")
+          (set-face-attribute 'markdown-pre-face nil :background "#f2f2f2"))
+      (when (facep 'markdown-code-face)
+        (set-face-attribute 'markdown-code-face nil :background 'unspecified)
+        (set-face-attribute 'markdown-pre-face nil :background 'unspecified))))
 
+  (advice-add 'load-theme :after #'my/adjust-markdown-faces-for-theme)
+  (my/adjust-markdown-faces-for-theme))
 
-;; (setq markdown-preview--preview-template
-;;       (expand-file-name "~/.emacs.d/markdown-preview-mode/preview.html"))
-
-;; (defun my-markdown-preview-eww-full ()
-;;   "Render markdown to HTML and open in EWW full window."
-;;   (interactive)
-;;   (let* ((md-buffer (current-buffer))
-;;          (md-file (or buffer-file-name
-;;                       (make-temp-file "markdown-preview" nil ".md")))
-;;          (html-file (concat (file-name-sans-extension md-file) ".html"))
-;;          (template markdown-preview--preview-template)
-;;          (raw-content (buffer-substring-no-properties (point-min) (point-max))))
-    
-;;     ;; Save temp file if buffer not visiting file
-;;     (unless buffer-file-name
-;;       (with-temp-file md-file
-;;         (insert raw-content)))
-    
-;;     ;; Generate HTML with embedded markdown
-;;     (with-temp-file html-file
-;;       (when (file-exists-p template)
-;;         (insert-file-contents template))
-;;       ;; Replace placeholder or insert script call
-;;       (goto-char (point-min))
-;;       (let ((base64-md (base64-encode-string 
-;;                         (encode-coding-string raw-content 'utf-8) t)))
-;;         (if (search-forward "<div id=\"content\">" nil t)
-;;             (replace-match (format "<div id=\"content\" data-markdown=\"%s\">" base64-md))
-;;           ;; Fallback
-;;           (goto-char (point-max))
-;;           (insert (format "\n<script>renderMarkdown('%s');</script>" base64-md)))))
-    
-;;     ;; Open in EWW
-;;     (eww-open-file html-file)
-;;     (delete-other-windows)))
-
-
-;; (load "~/.emacs.d/modern-eww-style.el")
-;; ;; Basic usage
-;; (require 'modern-eww-style)
-;; (modern-eww-style-enable)
-
-;; ;; With shrface integration (RECOMMENDED)
-;; (require 'shrface)              ; Install from MELPA first
-;; (require 'modern-eww-style)
-;; (modern-eww-style-enable)
-;; (modern-eww-style-shrface-enable)   ; Enable enhanced tables
-
-
-;; (load "~/.emacs.d/modern-w3m-style.el")
-;; (require 'modern-w3m-style)
-;; ;; Enable for all w3m buffers
-;; (modern-w3m-style-global-mode 1)
-;; ;; Or use presets
-;; (modern-w3m-style-github-preset)
-
-;; ;; Configure markdown-mode to use w3m for live preview
-;; (defun markdown-live-preview-window-w3m (file)
-;;   "Preview FILE with w3m.
-;; To be used with `markdown-live-preview-window-function'."
-;;   (if (require 'w3m nil t)
-;;       (progn
-;;         (w3m (concat "file://" file))
-;;         (get-buffer "*w3m*"))
-;;     (error "w3m is not present or not loaded on this version of Emacs")))
-
-;; ;; Set the preview function to use w3m
-;; (setq markdown-live-preview-window-function #'markdown-live-preview-window-w3m
-;; )
 
 (defun display-current-dir ()
   "Display the directory of the current buffer's file in the minibuffer."
@@ -1046,16 +988,16 @@ Uses ripgrep if available, falls back to grep. Shows relative paths and highligh
               ("C-c s" . my-dired-search-to-buffer)))
 
 
-(defvar my-toggle-themes '(spacemacs-light doom-one-light doom-ayu-dark)
-  "List of two themes to toggle between.")
+(defvar my-toggle-themes '(doom-ayu-dark spacemacs-light doom-one-light)
+  "List of themes to rotate through.")
 
 (defun my-toggle-theme ()
-  "Toggle between the two themes in `my-toggle-themes'."
+  "Cycle to the next theme in `my-toggle-themes'."
   (interactive)
   (let* ((current (car custom-enabled-themes))
-         (next (if (eq current (car my-toggle-themes))
-                   (cadr my-toggle-themes)
-                 (car my-toggle-themes))))
+         (current-idx (cl-position current my-toggle-themes))
+         (next-idx (mod (1+ (or current-idx -1)) (length my-toggle-themes)))
+         (next (nth next-idx my-toggle-themes)))
     (mapc #'disable-theme custom-enabled-themes)
     (load-theme next t)
     (message "Switched to %s" next)))
@@ -1083,16 +1025,16 @@ Uses ripgrep if available, falls back to grep. Shows relative paths and highligh
 (bind-key "C-c p" #'copy-file-path-to-clipboard)
 
 (defun ivy-jump-to-project-doc ()
-  "Find project root via .git, then jump to README.md or CHANGELOG.md with ivy."
+  "Find project root via .git, then jump to README.md, CHANGELOG.md, .gitignore, or project.cabal with ivy."
   (interactive)
   (let* ((root (locate-dominating-file default-directory ".git"))
          (files (when root
-                  (directory-files root t "^\\(README\\|CHANGELOG\\)\\.md$"))))
+                  (directory-files root t "^\\(\\(README\\|CHANGELOG\\)\\.md\\|\\.gitignore\\|project\\.cabal\\)$"))))
     (if (not root)
         (message "No .git found")
       (if (null files)
-          (message "No README.md or CHANGELOG.md in %s" root)
-        (ivy-read "Project doc: "
+          (message "No project files in %s" root)
+        (ivy-read "Project file: "
                   (mapcar (lambda (f) (cons (file-name-nondirectory f) f)) files)
                   :action (lambda (x) (find-file (cdr x)))
                   :caller 'ivy-jump-to-project-doc)))))
@@ -1124,7 +1066,7 @@ Uses ripgrep if available, falls back to grep. Shows relative paths and highligh
 
 (bind-key "C-c k" #'describe-personal-keybindings)
 
-(add-to-list 'load-path "/home/le/lang/elisp/emacs-libvterm")
+(add-to-list 'load-path (expand-file-name "~/lang/elisp/emacs-libvterm"))
 (require 'vterm)
 
 (defvar my/vterm-toggle-buffer-name "*vterm-toggle*"
@@ -1156,12 +1098,19 @@ Uses ripgrep if available, falls back to grep. Shows relative paths and highligh
             (when (string= (buffer-name buffer) my/vterm-toggle-buffer-name)
               (kill-buffer buffer))))
 
-(global-set-key (kbd "C-`") #'my/vterm-toggle)
+;; (global-set-key (kbd "C-`") #'my/vterm-toggle)
+(bind-key "C-`" #'shell)
 
-(add-to-list 'load-path "/home/le/lang/elisp/emacs-tramp-tunnel")
+(add-to-list 'load-path (expand-file-name "~/lang/elisp/emacs-tramp-tunnel"))
 (require 'tramp-proxy)
 
-(setq tramp-proxy-host "root@159.138.146.1")
+(let ((proxy-file (expand-file-name "~/.server-proxy")))
+  (when (file-exists-p proxy-file)
+    (setq tramp-proxy-host
+          (string-trim
+           (with-temp-buffer
+             (insert-file-contents proxy-file)
+             (buffer-string))))))
 
 (with-eval-after-load 'eat
   (define-key eat-semi-char-mode-map (kbd "C-c C-e") #'eat-emacs-mode)
@@ -1184,3 +1133,28 @@ Uses ripgrep if available, falls back to grep. Shows relative paths and highligh
 ;; Advise terminal emulators
 (with-eval-after-load 'eat
   (advice-add 'eat :around #'my-tramp-rpc-local-terminal-advice))
+
+
+(defun my/tramp-rpc-copy-to-local ()
+  "Copy the current remote file to a local path selected via ivy."
+  (interactive)
+  (unless buffer-file-name
+    (user-error "Not visiting a file"))
+  (unless (file-remote-p buffer-file-name)
+    (user-error "Not a remote file"))
+  (let* ((remote-file buffer-file-name)
+         (filename (file-name-nondirectory remote-file))
+         (default-dest (expand-file-name filename "~"))
+         (local-dest (read-file-name "Local destination: " "~" default-dest nil filename)))
+    (copy-file remote-file local-dest t)  ; t = overwrite
+    (message "Copied → %s" local-dest)))
+
+(bind-key "C-c c" #'my/tramp-rpc-copy-to-local)
+
+(defun my/eat-local ()
+  "Open eat in local directory, ignoring TRAMP default-directory."
+  (interactive)
+  (let ((default-directory (expand-file-name "~")))
+    (eat)))
+
+(bind-key "C-c C-s" #'dired-sidebar-toggle-sidebar)
