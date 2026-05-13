@@ -355,7 +355,6 @@ This command does not push erased text to kill-ring."
 (bind-key "C-S-P" 'move-text-up)
 (bind-key "C-S-N" 'move-text-down)
 
-
 (bind-key "C-S-<up>" 'move-text-up)
 (bind-key "C-S-<down>" 'move-text-down)
 
@@ -480,7 +479,6 @@ This command does not push erased text to kill-ring."
 (bind-key "M-b" 'backward-char)
 (bind-key "C-b" 'my-backward-word-or-other)
 
-
 ;; (require 'ido)
 ;; (ido-mode t)
 
@@ -497,7 +495,6 @@ This command does not push erased text to kill-ring."
 ;; (add-hook 'haskell-cabal-mode-hook 'eglot-ensure)
 ;; (add-hook 'racket-mode-hook 'eglot-ensure)
 
-
 (use-package git-gutter
   :config
   (global-git-gutter-mode +1))
@@ -505,7 +502,6 @@ This command does not push erased text to kill-ring."
 (unless (file-exists-p "~/.emacs.d/tmp/tramp-autosaves/")
   (make-directory "~/.emacs.d/tmp/tramp-autosaves/" t))
 (setq tramp-auto-save-directory "~/.emacs.d/tmp/tramp-autosaves/")
-
 
 ;; (defun kb-scroll-up-hold-cursor ()
 ;;   "Scroll up one position in file."
@@ -839,9 +835,41 @@ This command does not push erased text to kill-ring."
 
 ;; ── Color Ring with Resource Reclamation ─────────────────
 
+(defface le-hi-1  '((t (:background "#ffcccc"))) "Highlight face 1")
+(defface le-hi-2  '((t (:background "#ccffcc"))) "Highlight face 2")
+(defface le-hi-3  '((t (:background "#ccccff"))) "Highlight face 3")
+(defface le-hi-4  '((t (:background "#ffffcc"))) "Highlight face 4")
+(defface le-hi-5  '((t (:background "#ffccff"))) "Highlight face 5")
+(defface le-hi-6  '((t (:background "#ccffff"))) "Highlight face 6")
+(defface le-hi-7  '((t (:background "#ffe5cc"))) "Highlight face 7")
+(defface le-hi-8  '((t (:background "#e5ccff"))) "Highlight face 8")
+(defface le-hi-9  '((t (:background "#ccffe5"))) "Highlight face 9")
+(defface le-hi-10 '((t (:background "#ffccd9"))) "Highlight face 10")
+(defface le-hi-11 '((t (:background "#cce5ff"))) "Highlight face 11")
+(defface le-hi-12 '((t (:background "#e5ffcc"))) "Highlight face 12")
+
 (defvar le/hi-lock-faces
-  '(hi-yellow hi-pink hi-green hi-blue hi-red-b hi-blue-b)
+  '(le-hi-1 le-hi-2 le-hi-3 le-hi-4 le-hi-5 le-hi-6
+    le-hi-7 le-hi-8 le-hi-9 le-hi-10 le-hi-11 le-hi-12)
   "Available faces in the ring, in order.")
+
+(defun my/set-highlight-colors-for-theme (&rest _)
+  "Set highlight face backgrounds based on the active theme."
+  (let ((light-colors
+         '("#ffcccc" "#ccffcc" "#ccccff" "#ffffcc" "#ffccff" "#ccffff"
+           "#ffe5cc" "#e5ccff" "#ccffe5" "#ffccd9" "#cce5ff" "#e5ffcc"))
+        (dark-colors
+         '("#e06c75" "#98c379" "#61afef" "#e5c07b" "#c678dd" "#56b6c2"
+           "#d19a66" "#a9a1e1" "#7bc275" "#ff6b9d" "#5cEfff" "#b9f27c")))
+    (dotimes (i 12)
+      (set-face-attribute (intern (format "le-hi-%d" (1+ i))) nil
+                          :background
+                          (if (member 'doom-ayu-dark custom-enabled-themes)
+                              (nth i dark-colors)
+                            (nth i light-colors))))))
+
+(advice-add 'load-theme :after #'my/set-highlight-colors-for-theme)
+(my/set-highlight-colors-for-theme)
 
 (defvar le/face-ring-allocated nil
   "List of plists (:face FACE :symbol SYMBOL :regexp REGEXP) tracking in-use colors.")
@@ -939,9 +967,31 @@ This command does not push erased text to kill-ring."
   (setq le/face-ring-next-idx 0)
   (message "All persistent highlights cleared, ring reset"))
 
+(defun le/toggle-persistent-highlight ()
+  "Toggle persistent highlight for symbol at point.
+Highlight if not already highlighted; unhighlight if it is."
+  (interactive)
+  (let ((sym (le/symbol-at-point)))
+    (unless sym
+      (user-error "No symbol at point"))
+    (let ((entry (le/find-entry-by-symbol sym)))
+      (if entry
+          ;; Already highlighted → unhighlight
+          (let ((face (plist-get entry :face))
+                (regexp (plist-get entry :regexp)))
+            (unhighlight-regexp regexp)
+            (le/release-face face)
+            (message "Removed persistent highlight: %s (reclaimed %s)" sym face))
+        ;; Not highlighted → highlight
+        (let* ((face (le/allocate-face))
+               (stored-regexp (highlight-regexp (concat "\\<" (regexp-quote sym) "\\>") face)))
+          (unless stored-regexp
+            (setq stored-regexp (concat "\\<" (regexp-quote sym) "\\>")))
+          (push (list :face face :symbol sym :regexp stored-regexp) le/face-ring-allocated)
+          (message "Persistently highlighted: %s (%s)" sym face))))))
+
 ;; ── Keybindings ─────────────────────────────────────────
-(bind-key "C-c h" #'le/persistent-highlight-symbol)
-(bind-key "C-c H" #'le/persistent-unhighlight-symbol)
+(bind-key "C-c h" #'le/toggle-persistent-highlight)
 (bind-key "C-c M-h" #'le/clear-all-persistent-highlights)
 
 (global-hi-lock-mode 1)
