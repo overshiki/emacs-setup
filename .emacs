@@ -550,6 +550,25 @@ This command does not push erased text to kill-ring."
 (bind-key "M-<up>" 'kb-scroll-down-hold-cursor)
 (bind-key "M-<down>" 'kb-scroll-up-hold-cursor)
 
+;; ── Review Mode ─────────────────────────────────────────
+(defvar my/review-mode-map
+  (let ((map (make-sparse-keymap)))
+    (define-key map (kbd "C-p") #'kb-scroll-down-hold-cursor)
+    (define-key map (kbd "C-n") #'kb-scroll-up-hold-cursor)
+    (define-key map (kbd "<up>") #'kb-scroll-down-hold-cursor)
+    (define-key map (kbd "<down>") #'kb-scroll-up-hold-cursor)
+    map)
+  "Keymap for my/review-mode.")
+
+(define-minor-mode my/review-mode
+  "Toggle review mode.
+In review mode, C-p and C-n scroll the buffer instead of moving point."
+  :global t
+  :lighter nil
+  :keymap my/review-mode-map)
+
+(bind-key "C-c r" #'my/review-mode)
+
 (bind-key "M-w" 'kill-region)
 (bind-key "C-w" 'kill-ring-save)
 (bind-key "C-v" 'yank)
