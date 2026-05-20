@@ -1226,4 +1226,4 @@ Uses ripgrep if available, falls back to grep. Shows relative paths and highligh
   (let ((default-directory (expand-file-name "~")))
     (eat)))
 
-(bind-key "C-c C-s" #'dired-sidebar-toggle-sidebar)
+(bind-key "C-]" #'dired-sidebar-toggle-sidebar)
