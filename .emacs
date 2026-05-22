@@ -1062,6 +1062,26 @@ Highlight if not already highlighted; unhighlight if it is."
 (bind-key "C-c l" #'le/toggle-region-highlight)
 (bind-key "C-c M-h" #'le/clear-all-persistent-highlights)
 
+(defvar my/swiper-all-window nil
+  "Window created by `my/toggle-swiper-all-right'.")
+
+(defun my/toggle-swiper-all-right ()
+  "Toggle a right-hand window running `swiper-all'.
+First call: split right, switch there, launch `swiper-all'.
+Second call: delete that window."
+  (interactive)
+  (if (and my/swiper-all-window (window-live-p my/swiper-all-window))
+      (progn
+        (delete-window my/swiper-all-window)
+        (setq my/swiper-all-window nil))
+    (setq my/swiper-all-window nil)
+    (split-window-right)
+    (other-window 1)
+    (setq my/swiper-all-window (selected-window))
+    (call-interactively #'swiper-all)))
+
+(bind-key "C-c s" #'my/toggle-swiper-all-right)
+
 (global-hi-lock-mode 1)
 
 (defun my-dired-search-to-buffer ()
