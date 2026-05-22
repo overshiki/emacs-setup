@@ -981,7 +981,11 @@ In review mode, C-p and C-n scroll the buffer instead of moving point."
   "Remove all highlights, fully reset ring."
   (interactive)
   (dolist (entry le/face-ring-allocated)
-    (ignore-errors (unhighlight-regexp (plist-get entry :regexp))))
+    (cond
+     ((plist-get entry :regexp)
+      (ignore-errors (unhighlight-regexp (plist-get entry :regexp))))
+     ((plist-get entry :overlay)
+      (ignore-errors (delete-overlay (plist-get entry :overlay))))))
   (setq le/face-ring-allocated nil)
   (setq le/face-ring-next-idx 0)
   (message "All persistent highlights cleared, ring reset"))
@@ -1009,8 +1013,53 @@ Highlight if not already highlighted; unhighlight if it is."
           (push (list :face face :symbol sym :regexp stored-regexp) le/face-ring-allocated)
           (message "Persistently highlighted: %s (%s)" sym face))))))
 
+(defun le/toggle-region-highlight ()
+  "Toggle persistent highlight for the active region or region at point."
+  (interactive)
+  (cond
+   ;; Case 1: Active region
+   ((use-region-p)
+    (let ((existing (cl-find-if
+                     (lambda (entry)
+                       (let ((ov (plist-get entry :overlay)))
+                         (and ov
+                              (= (overlay-start ov) (region-beginning))
+                              (= (overlay-end ov) (region-end)))))
+                     le/face-ring-allocated)))
+      (if existing
+          ;; Exact match → unhighlight
+          (progn
+            (delete-overlay (plist-get existing :overlay))
+            (le/release-face (plist-get existing :face))
+            (setq le/face-ring-allocated (remove existing le/face-ring-allocated))
+            (message "Region highlight removed"))
+        ;; New region → highlight
+        (let* ((face (le/allocate-face))
+               (ov (make-overlay (region-beginning) (region-end))))
+          (overlay-put ov 'face face)
+          (overlay-put ov 'le-region-highlight t)
+          (push (list :face face :overlay ov) le/face-ring-allocated)
+          (message "Region highlighted with %s" face)))))
+   ;; Case 2: No region, point inside existing region highlight
+   (t
+    (let ((existing (cl-find-if
+                     (lambda (entry)
+                       (let ((ov (plist-get entry :overlay)))
+                         (and ov
+                              (>= (point) (overlay-start ov))
+                              (<= (point) (overlay-end ov)))))
+                     le/face-ring-allocated)))
+      (if existing
+          (progn
+            (delete-overlay (plist-get existing :overlay))
+            (le/release-face (plist-get existing :face))
+            (setq le/face-ring-allocated (remove existing le/face-ring-allocated))
+            (message "Region highlight removed"))
+        (user-error "No region active and no highlighted region at point"))))))
+
 ;; ── Keybindings ─────────────────────────────────────────
 (bind-key "C-c h" #'le/toggle-persistent-highlight)
+(bind-key "C-c l" #'le/toggle-region-highlight)
 (bind-key "C-c M-h" #'le/clear-all-persistent-highlights)
 
 (global-hi-lock-mode 1)
