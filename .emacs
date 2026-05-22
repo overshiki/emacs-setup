@@ -544,8 +544,8 @@ This command does not push erased text to kill-ring."
   (forward-line -1))
 
 
-(bind-key "M-p" 'kb-scroll-up-hold-cursor)
-(bind-key "M-n" 'kb-scroll-down-hold-cursor)
+(bind-key "M-n" 'kb-scroll-up-hold-cursor)
+(bind-key "M-p" 'kb-scroll-down-hold-cursor)
 
 (bind-key "M-<up>" 'kb-scroll-down-hold-cursor)
 (bind-key "M-<down>" 'kb-scroll-up-hold-cursor)
@@ -1168,7 +1168,6 @@ Uses ripgrep if available, falls back to grep. Shows relative paths and highligh
               (kill-buffer buffer))))
 
 ;; (global-set-key (kbd "C-`") #'my/vterm-toggle)
-(bind-key "C-`" #'shell)
 
 (add-to-list 'load-path (expand-file-name "~/lang/elisp/emacs-tramp-tunnel"))
 (require 'tramp-proxy)
