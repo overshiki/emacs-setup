@@ -5,43 +5,7 @@
                          ("melpa" . "https://mirrors.ustc.edu.cn/elpa/melpa/")
                          ("nongnu" . "https://mirrors.ustc.edu.cn/elpa/nongnu/")))
 
-(setq package-list
-      '(corfu
-        cape
-        jedi
-        company
-        multiple-cursors
-        use-package
-        auto-highlight-symbol
-        auto-complete
-        highlight-parentheses
-        clipmon
-        highlight-indent-guides
-        swiper-helm
-        lsp-haskell
-        doom-themes
-        go-mode
-        haskell-mode
-        futhark-mode
-        racket-mode
-        tuareg         ;;; ocaml
-        julia-mode
-        rust-mode
-        markdown-mode
-        elixir-mode
-        scala-mode
-        transpose-frame
-        matlab-mode
-        counsel
-        merlin-eldoc
-        gruber-darker-theme
-        ))
-
 (package-initialize)
-(dolist (package package-list)
-  (unless (package-installed-p package)
-    (package-refresh-contents)
-    (package-install package)))
 
 ;;; -*- lexical-binding: t -*-
 (custom-set-variables
@@ -81,23 +45,17 @@
  ;; If there is more than one, they won't work right.
  '(default ((t (:family "Ubuntu Mono" :foundry "DAMA" :slant normal :weight normal :height 240 :width normal)))))
 
-;; (add-hook 'python-mode-hook 'jedi:setup)
-
-;; use company instead of this
-;; ;; https://stackoverflow.com/questions/8095715/emacs-auto-complete-mode-at-startup
-;; (global-auto-complete-mode t)
-;; (defun auto-complete-mode-maybe ()
-;;   "No maybe for you. Only AC!"
-;;   (unless (minibufferp (current-buffer))
-;;     (auto-complete-mode 1)))
-
 ;; I prefer no theme in the end
 ;; (load-theme 'doom-dark+ :no-confirm)
 (load-theme 'doom-ayu-dark :no-confirm)
-;; (load-theme 'gruber-darker :no-confirm)
-;; (load-theme 'doom-ayu-light :no-confirm)
-;; (load-theme 'doom-one-light :no-confirm)
-;; (load-theme 'spacemacs-light :no-confirm)
+
+(use-package doom-themes
+  :ensure t
+  :defer t)
+
+(use-package spacemacs-theme
+  :ensure t
+  :defer t)
 
 ;; (use-package dired+
 ;;   :ensure t
@@ -124,6 +82,7 @@
               )
 
 (use-package highlight-parentheses
+  :ensure t
   :config
   (define-globalized-minor-mode global-highlight-parentheses-mode
     highlight-parentheses-mode
@@ -140,11 +99,24 @@
 
 
 (use-package highlight-indent-guides
+  :ensure t
   :hook (prog-mode . highlight-indent-guides-mode))
 
 (use-package auto-highlight-symbol
+  :ensure t
   :config
   (global-auto-highlight-symbol-mode t))
+
+;; ── Major modes ─────────────────────────────────────────
+(use-package go-mode :ensure t)
+(use-package rust-mode :ensure t)
+(use-package julia-mode :ensure t)
+(use-package scala-mode :ensure t)
+(use-package elixir-mode :ensure t)
+(use-package futhark-mode :ensure t)
+(use-package racket-mode :ensure t)
+(use-package tuareg :ensure t)
+(use-package haskell-mode :ensure t)
 
 (bind-key "C-;" 'comment-line)
 
@@ -166,12 +138,7 @@
 
 (setq make-backup-files nil) ; stop creating ~ files
 
-;; use company instead of this
-;; (global-corfu-mode)
-;; (corfu-popupinfo-mode)
-;; (setq corfu-terminal t)
-;; (add-to-list 'completion-at-point-functions #'cape-file)
-;; (add-to-list 'completion-at-point-functions #'cape-dabbrev)
+
 
 
 (global-hl-line-mode 1)
@@ -223,6 +190,7 @@ Version 2016-06-15"
 (bind-key "M-p" 'xah-backward-block)
 
 (use-package multiple-cursors
+  :ensure t
   :bind (("C-c C-d" . mc/mark-next-like-this)
          ("C-<" . mc/mark-previous-like-this)
          ("C-c C-<" . mc/mark-all-like-this)))
@@ -366,6 +334,7 @@ This command does not push erased text to kill-ring."
 ;; language servers
 
 (use-package lsp
+  :ensure t
   :commands (lsp lsp-deferred))
 
 (defun haskell-format-buffer-with-ormolu ()
@@ -376,6 +345,7 @@ This command does not push erased text to kill-ring."
       (shell-command-on-region (point-min) (point-max) "ormolu" (current-buffer) t))))
 
 (use-package lsp-haskell
+  :ensure t
   :after lsp
   :hook ((haskell-mode . lsp)
          (haskell-literate-mode . lsp))
@@ -385,12 +355,14 @@ This command does not push erased text to kill-ring."
               (add-hook 'before-save-hook 'haskell-format-buffer-with-ormolu nil t))))
 
 (use-package auto-complete
+  :ensure t
   :config
   (add-hook 'interactive-haskell-mode-hook 'ac-haskell-process-setup)
   (add-hook 'haskell-interactive-mode-hook 'ac-haskell-process-setup)
   (add-to-list 'ac-modes 'haskell-interactive-mode))
 
 (use-package flymake
+  :ensure t
   :hook (flymake-mode . (lambda ()
                           (setq flymake-suppress-zero-counters t)
                           (setq flymake-start-on-flymake-mode t)
@@ -402,6 +374,7 @@ This command does not push erased text to kill-ring."
 ;;   (setq lsp-pyls-server-command '("pylsp")))
 
 (use-package lsp-ui
+  :ensure t
   :after lsp
   :hook (lsp-mode . lsp-ui-mode)
   :config
@@ -416,11 +389,20 @@ This command does not push erased text to kill-ring."
 (bind-key "C-x C-p" 'previous-buffer)
 (bind-key "C-x C-n" 'next-buffer)
 
-(bind-key "C-M-]" 'term-toggle-shell)
-(bind-key "C-`" 'term-toggle-shell)
+(use-package term-toggle
+  :ensure nil
+  :bind (("C-M-]" . term-toggle-shell)
+         ("C-`" . term-toggle-shell)))
 
-(bind-key "C-s" 'swiper-thing-at-point)
-(bind-key "M-s" 'counsel-ag)
+(use-package swiper
+  :ensure t
+  :bind (("C-s" . swiper-thing-at-point)
+         ("C-c s" . my/toggle-swiper-all-right)))
+
+(use-package counsel
+  :ensure t
+  :bind (("M-s" . counsel-ag)
+         ("C-c C-s" . my/toggle-counsel-rg-right)))
 
 
 (bind-key "C-k" 'kill-line)
@@ -483,11 +465,17 @@ This command does not push erased text to kill-ring."
 ;; (ido-mode t)
 
 (use-package ivy
+  :ensure t
   :config
   (ivy-mode t)
-  (setopt ivy-use-selectable-prompt t))
+  (setopt ivy-use-selectable-prompt t)
+  (ivy-configure 'counsel-rg
+    :update-fn 'auto)
+  (ivy-configure 'counsel-ag
+    :update-fn 'auto))
 
 (use-package company
+  :ensure t
   :hook (after-init . global-company-mode))
 
 ;; ;; use lsp instead
@@ -496,6 +484,7 @@ This command does not push erased text to kill-ring."
 ;; (add-hook 'racket-mode-hook 'eglot-ensure)
 
 (use-package git-gutter
+  :ensure t
   :config
   (global-git-gutter-mode +1))
 
@@ -591,6 +580,7 @@ In review mode, C-p and C-n scroll the buffer instead of moving point."
   ))
 
 (use-package merlin-eldoc
+  :ensure t
   :after merlin
   :config
   (merlin-eldoc-setup))
@@ -781,6 +771,7 @@ In review mode, C-p and C-n scroll the buffer instead of moving point."
      (t (find-file (expand-file-name prev dir))))))
 
 (use-package markdown-mode
+  :ensure t
   :mode (("\\.md\\'" . markdown-mode)
          ("\\.markdown\\'" . markdown-mode))
   :bind (:map markdown-mode-map
@@ -836,6 +827,7 @@ In review mode, C-p and C-n scroll the buffer instead of moving point."
 ;;          ("g" . grip-mode)))
 
 (use-package valign
+  :ensure t
   :hook (markdown-mode . valign-mode))
 
 (defun clear-local-mark-ring ()
@@ -1082,6 +1074,26 @@ Second call: delete that window."
 
 (bind-key "C-c s" #'my/toggle-swiper-all-right)
 
+(defvar my/counsel-rg-window nil
+  "Window created by `my/toggle-counsel-rg-right'.")
+
+(defun my/toggle-counsel-rg-right ()
+  "Toggle a right-hand window running `counsel-rg'.
+First call: split right, switch there, launch `counsel-rg' in `default-directory'.
+Second call: delete that window."
+  (interactive)
+  (if (and my/counsel-rg-window (window-live-p my/counsel-rg-window))
+      (progn
+        (delete-window my/counsel-rg-window)
+        (setq my/counsel-rg-window nil))
+    (setq my/counsel-rg-window nil)
+    (split-window-right)
+    (other-window 1)
+    (setq my/counsel-rg-window (selected-window))
+    (call-interactively #'counsel-rg)))
+
+(bind-key "C-c C-s" #'my/toggle-counsel-rg-right)
+
 (global-hi-lock-mode 1)
 
 (defun my-dired-search-to-buffer ()
@@ -1204,8 +1216,15 @@ Uses ripgrep if available, falls back to grep. Shows relative paths and highligh
 
 (bind-key "C-c k" #'describe-personal-keybindings)
 
-(add-to-list 'load-path (expand-file-name "~/lang/elisp/emacs-libvterm"))
-(require 'vterm)
+(use-package vterm
+  :ensure nil
+  :load-path "~/lang/elisp/emacs-libvterm"
+  :commands (vterm my/vterm-toggle)
+  :config
+  (add-hook 'vterm-exit-functions
+            (lambda (buffer)
+              (when (string= (buffer-name buffer) my/vterm-toggle-buffer-name)
+                (kill-buffer buffer)))))
 
 (defvar my/vterm-toggle-buffer-name "*vterm-toggle*"
   "Name of the dedicated toggle vterm buffer.")
@@ -1230,16 +1249,9 @@ Uses ripgrep if available, falls back to grep. Shows relative paths and highligh
         (select-window win)
         (vterm my/vterm-toggle-buffer-name))))))
 
-;; Optional: kill the buffer when shell exits to avoid stale state
-(add-hook 'vterm-exit-functions
-          (lambda (buffer)
-            (when (string= (buffer-name buffer) my/vterm-toggle-buffer-name)
-              (kill-buffer buffer))))
-
-;; (global-set-key (kbd "C-`") #'my/vterm-toggle)
-
-(add-to-list 'load-path (expand-file-name "~/lang/elisp/emacs-tramp-tunnel"))
-(require 'tramp-proxy)
+(use-package tramp-proxy
+  :ensure nil
+  :load-path "~/lang/elisp/emacs-tramp-tunnel")
 
 (let ((proxy-file (expand-file-name "~/.server-proxy")))
   (when (file-exists-p proxy-file)
@@ -1249,9 +1261,13 @@ Uses ripgrep if available, falls back to grep. Shows relative paths and highligh
              (insert-file-contents proxy-file)
              (buffer-string))))))
 
-(with-eval-after-load 'eat
+(use-package eat
+  :ensure t
+  :commands (eat my/eat-local)
+  :config
   (define-key eat-semi-char-mode-map (kbd "C-c C-e") #'eat-emacs-mode)
-  (define-key eat-mode-map (kbd "C-c C-e") #'eat-semi-char-mode))
+  (define-key eat-mode-map (kbd "C-c C-e") #'eat-semi-char-mode)
+  (advice-add 'eat :around #'my-tramp-rpc-local-terminal-advice))
 
 
 (defvar my-tramp-rpc-local-terminals t
@@ -1266,10 +1282,6 @@ Uses ripgrep if available, falls back to grep. Shows relative paths and highligh
       (let ((default-directory (expand-file-name "~")))
         (apply orig-fun args))
     (apply orig-fun args)))
-
-;; Advise terminal emulators
-(with-eval-after-load 'eat
-  (advice-add 'eat :around #'my-tramp-rpc-local-terminal-advice))
 
 
 (defun my/tramp-rpc-copy-to-local ()
@@ -1294,4 +1306,6 @@ Uses ripgrep if available, falls back to grep. Shows relative paths and highligh
   (let ((default-directory (expand-file-name "~")))
     (eat)))
 
-(bind-key "C-]" #'dired-sidebar-toggle-sidebar)
+(use-package dired-sidebar
+  :ensure t
+  :bind ("C-]" . dired-sidebar-toggle-sidebar))
