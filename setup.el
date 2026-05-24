@@ -25,6 +25,11 @@
         (message "Copied successfully."))
     (message "Warning: %s source file not found!" src)))
 
+;; Configure git colors for Emacs shell
+(message "Configuring git...")
+(shell-command "git config --global color.ui always")
+(shell-command "git config --global core.pager cat")
+
 ;; Install tramp-rpc to ~/lang/elisp
 (message "Setting up tramp-rpc...")
 (shell-command "mkdir -p ~/lang/elisp")

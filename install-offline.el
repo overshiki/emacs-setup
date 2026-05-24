@@ -73,7 +73,13 @@
   (shell-command "fc-cache -fv")
   (message "Fonts installed"))
 
-;; --- 5. Copy .emacs to home ---
+;; --- 5. Configure git ---
+(message "=== Configuring git ===")
+(shell-command "git config --global color.ui always")
+(shell-command "git config --global core.pager cat")
+(message "Git configured")
+
+;; --- 6. Copy .emacs to home ---
 (message "=== Copying .emacs ===")
 (let ((src ".emacs")
       (dst (expand-file-name "~/.emacs")))
@@ -83,13 +89,13 @@
         (message ".emacs copied to %s" dst))
     (message "Warning: .emacs not found in current directory")))
 
-;; --- 6. Setup ~/.emacs.d ---
+;; --- 7. Setup ~/.emacs.d ---
 (let ((emacs-d-dir (expand-file-name "~/.emacs.d")))
   (unless (file-directory-p emacs-d-dir)
     (make-directory emacs-d-dir)
     (message "Created ~/.emacs.d")))
 
-;; --- 7. Optional Emacs tarball notice ---
+;; --- 8. Optional Emacs tarball notice ---
 (let ((emacs-tarball (expand-file-name "emacs-30.2.tar.xz" download-dir)))
   (when (file-exists-p emacs-tarball)
     (message "Emacs 30.2 source tarball found at %s" emacs-tarball)

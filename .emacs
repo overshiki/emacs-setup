@@ -11,6 +11,9 @@
 ;; tramp-rpc requires >= 2.8.1.4, so we ensure the ELPA copy takes precedence.
 (require 'tramp)
 
+;; Enable ANSI color rendering in M-x shell
+(add-hook 'shell-mode-hook 'ansi-color-for-comint-mode-on)
+
 ;;; -*- lexical-binding: t -*-
 (custom-set-variables
  ;; custom-set-variables was added by Custom.
