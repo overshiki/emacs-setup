@@ -54,19 +54,9 @@
       (message "WARNING: Rust binary missing. If architecture differs, run 'cargo build --release' in %s/server"
                target))))
 
-;; --- 4. Extract tramp ---
-(message "=== Extracting tramp ===")
-(let ((tramp-tarball (expand-file-name "tramp-2.8.1.3.tar.gz" download-dir))
-      (target-dir (expand-file-name "~/lang/elisp")))
-  (unless (file-exists-p tramp-tarball)
-    (error "tramp tarball not found in download/"))
-  (shell-command
-   (format "tar -xzf %s -C %s"
-           (shell-quote-argument tramp-tarball)
-           (shell-quote-argument target-dir)))
-  (message "tramp extracted to %s" target-dir))
+;; tramp is installed from the elpa/ snapshot (GNU ELPA version >= 2.8.1.4)
 
-;; --- 5. Install fonts ---
+;; --- 4. Install fonts ---
 (message "=== Installing fonts ===")
 (let ((font-dir (expand-file-name "~/.local/share/fonts")))
   (make-directory font-dir t)
@@ -83,7 +73,7 @@
   (shell-command "fc-cache -fv")
   (message "Fonts installed"))
 
-;; --- 6. Copy .emacs to home ---
+;; --- 5. Copy .emacs to home ---
 (message "=== Copying .emacs ===")
 (let ((src ".emacs")
       (dst (expand-file-name "~/.emacs")))
@@ -93,13 +83,13 @@
         (message ".emacs copied to %s" dst))
     (message "Warning: .emacs not found in current directory")))
 
-;; --- 7. Setup ~/.emacs.d ---
+;; --- 6. Setup ~/.emacs.d ---
 (let ((emacs-d-dir (expand-file-name "~/.emacs.d")))
   (unless (file-directory-p emacs-d-dir)
     (make-directory emacs-d-dir)
     (message "Created ~/.emacs.d")))
 
-;; --- 8. Optional Emacs tarball notice ---
+;; --- 7. Optional Emacs tarball notice ---
 (let ((emacs-tarball (expand-file-name "emacs-30.2.tar.xz" download-dir)))
   (when (file-exists-p emacs-tarball)
     (message "Emacs 30.2 source tarball found at %s" emacs-tarball)

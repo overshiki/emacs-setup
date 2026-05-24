@@ -48,12 +48,8 @@
 ;; --- 3. Tarballs ---
 (message "=== Downloading tarballs ===")
 
-(let ((tramp-file (expand-file-name "tramp-2.8.1.3.tar.gz" download-dir)))
-  (if (file-exists-p tramp-file)
-      (message "tramp tarball already exists, skipping...")
-    (message "Downloading tramp tarball...")
-    (url-copy-file "https://ftp.gnu.org/gnu/tramp/tramp-2.8.1.3.tar.gz"
-                   tramp-file t)))
+;; tramp is now installed from GNU ELPA (captured in elpa/ snapshot)
+;; and automatically kept up-to-date via package-install.
 
 ;; Optional: Emacs source tarball (for build-emacs.sh)
 (let ((emacs-file (expand-file-name "emacs-30.2.tar.xz" download-dir)))

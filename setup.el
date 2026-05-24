@@ -25,13 +25,9 @@
         (message "Copied successfully."))
     (message "Warning: %s source file not found!" src)))
 
-;; Install tramp and tramp-rpc to ~/lang/elisp
-(message "Setting up tramp and tramp-rpc...")
+;; Install tramp-rpc to ~/lang/elisp
+(message "Setting up tramp-rpc...")
 (shell-command "mkdir -p ~/lang/elisp")
-
-;; Download and extract tramp 2.8.1.3
-(shell-command "wget -c https://ftp.gnu.org/gnu/tramp/tramp-2.8.1.3.tar.gz -O /tmp/tramp-2.8.1.3.tar.gz")
-(shell-command "cd ~/lang/elisp && tar -xzf /tmp/tramp-2.8.1.3.tar.gz")
 
 ;; Clone emacs-tramp-rpc
 (shell-command "cd ~/lang/elisp && git clone https://github.com/ArthurHeymans/emacs-tramp-rpc.git || true")

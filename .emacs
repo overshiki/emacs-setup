@@ -7,6 +7,10 @@
 
 (package-initialize)
 
+;; Load ELPA tramp early before any package can pull in the built-in version.
+;; tramp-rpc requires >= 2.8.1.4, so we ensure the ELPA copy takes precedence.
+(require 'tramp)
+
 ;;; -*- lexical-binding: t -*-
 (custom-set-variables
  ;; custom-set-variables was added by Custom.
@@ -333,7 +337,7 @@ This command does not push erased text to kill-ring."
 ;; ;; use eglot instead
 ;; language servers
 
-(use-package lsp
+(use-package lsp-mode
   :ensure t
   :commands (lsp lsp-deferred))
 
@@ -346,7 +350,7 @@ This command does not push erased text to kill-ring."
 
 (use-package lsp-haskell
   :ensure t
-  :after lsp
+  :after lsp-mode
   :hook ((haskell-mode . lsp)
          (haskell-literate-mode . lsp))
   :init
@@ -1155,11 +1159,9 @@ Uses ripgrep if available, falls back to grep. Shows relative paths and highligh
 ;; Bind to a convenient key, e.g., C-c t
 (bind-key "C-x t" #'my-toggle-theme)
 
-(add-to-list 'load-path (expand-file-name "~/lang/elisp/tramp-2.8.1.3"))
-(use-package tramp)
-
 (add-to-list 'load-path (expand-file-name "~/lang/elisp/emacs-tramp-rpc/lisp"))
 (use-package tramp-rpc
+  :ensure nil
   :after tramp)
 
 (defun copy-file-path-to-clipboard ()
