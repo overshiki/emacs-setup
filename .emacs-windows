@@ -1,3 +1,6 @@
+;; .emacs-windows --- Windows-compatible Emacs config -*- lexical-binding: t -*-
+;; Generated from .emacs — do not edit manually.
+
 (require 'package)
 (require 'bind-key)
 
@@ -8,7 +11,6 @@
 (package-initialize)
 
 ;; Load ELPA tramp early before any package can pull in the built-in version.
-;; tramp-rpc requires >= 2.8.1.4, so we ensure the ELPA copy takes precedence.
 (require 'tramp)
 
 ;; Enable ANSI color rendering in M-x shell
@@ -35,7 +37,6 @@
                            dired-sidebar diredfl dirvish doom-themes
                            eat elixir-mode futhark-mode git-gutter
                            go-mode grip-mode gruber-darker-theme
-                           rime
                            haskell-mode highlight-indent-guides
                            highlight-parentheses jedi julia-mode
                            lsp-haskell markdown-preview-mode
@@ -51,7 +52,7 @@
  ;; If you edit it by hand, you could mess it up, so be careful.
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
- '(default ((t (:family "Ubuntu Mono" :foundry "DAMA" :slant normal :weight normal :height 240 :width normal)))))
+ '(default ((t (:family "Consolas" :foundry "DAMA" :slant normal :weight normal :height 240 :width normal)))))
 
 ;; I prefer no theme in the end
 ;; (load-theme 'doom-dark+ :no-confirm)
@@ -1164,11 +1165,6 @@ Uses ripgrep if available, falls back to grep. Shows relative paths and highligh
 ;; Bind to a convenient key, e.g., C-c t
 (bind-key "C-x t" #'my-toggle-theme)
 
-(add-to-list 'load-path (expand-file-name "~/lang/elisp/emacs-tramp-rpc/lisp"))
-(use-package tramp-rpc
-  :ensure nil
-  :after tramp)
-
 (defun copy-file-path-to-clipboard ()
   "Copy the absolute path of the current buffer's file to the system clipboard."
   (interactive)
@@ -1223,96 +1219,19 @@ Uses ripgrep if available, falls back to grep. Shows relative paths and highligh
 
 (bind-key "C-c k" #'describe-personal-keybindings)
 
-(use-package vterm
-  :ensure nil
-  :load-path "~/lang/elisp/emacs-libvterm"
-  :commands (vterm my/vterm-toggle)
-  :config
-  (add-hook 'vterm-exit-functions
-            (lambda (buffer)
-              (when (string= (buffer-name buffer) my/vterm-toggle-buffer-name)
-                (kill-buffer buffer)))))
-
-(defvar my/vterm-toggle-buffer-name "*vterm-toggle*"
-  "Name of the dedicated toggle vterm buffer.")
-
-(defun my/vterm-toggle ()
-  "Toggle a dedicated vterm buffer in a bottom window."
-  (interactive)
-  (let ((buffer (get-buffer my/vterm-toggle-buffer-name))
-        (window (get-buffer-window my/vterm-toggle-buffer-name)))
-    (cond
-     ;; Visible: hide it
-     (window
-      (delete-window window))
-     ;; Hidden but exists: show in bottom split
-     (buffer
-      (let ((win (split-window-below -15)))
-        (select-window win)
-        (switch-to-buffer buffer)))
-     ;; Doesn't exist: create
-     (t
-      (let ((win (split-window-below -15)))
-        (select-window win)
-        (vterm my/vterm-toggle-buffer-name))))))
-
-(use-package tramp-proxy
-  :ensure nil
-  :load-path "~/lang/elisp/emacs-tramp-tunnel")
-
-(let ((proxy-file (expand-file-name "~/.server-proxy")))
-  (when (file-exists-p proxy-file)
-    (setq tramp-proxy-host
-          (string-trim
-           (with-temp-buffer
-             (insert-file-contents proxy-file)
-             (buffer-string))))))
-
 (use-package eat
   :ensure t
   :commands (eat my/eat-local)
   :config
   (define-key eat-semi-char-mode-map (kbd "C-c C-e") #'eat-emacs-mode)
   (define-key eat-mode-map (kbd "C-c C-e") #'eat-semi-char-mode)
-  (advice-add 'eat :around #'my-tramp-rpc-local-terminal-advice))
+  )
 
-;; ── Chinese input method ─────────────────────────────────
-(use-package rime
-  :ensure t
-  :init
-  (setq default-input-method "rime")
-  :custom
-  (rime-show-candidate 'popup)
-  (rime-inline-ascii t)
-  (rime-inline-ascii-trigger 'shift-l)
-  (rime-default-schema-id "luna_pinyin_simp")
-  :config
-  ;; Prevent rime from stalling when system librime is missing
-  (unless (file-exists-p (expand-file-name "librime-emacs.so"
-                                            (file-name-directory (locate-library "rime"))))
-    (message "WARNING: rime module not built. Run M-x rime-compile-module after installing librime-dev.")))
-
-(defvar my-tramp-rpc-local-terminals t
-  "When non-nil, open terminal emulators locally even in TRAMP-RPC buffers.")
-
-(defun my-tramp-rpc-local-terminal-advice (orig-fun &rest args)
-  "Run terminal emulator with local `default-directory'."
-  (if (and my-tramp-rpc-local-terminals
-           (boundp 'tramp-rpc-method)
-           (file-remote-p default-directory)
-           (string-prefix-p "/rpc:" (expand-file-name default-directory)))
-      (let ((default-directory (expand-file-name "~")))
-        (apply orig-fun args))
-    (apply orig-fun args)))
-
-
-(defun my/tramp-rpc-copy-to-local ()
-  "Copy the current remote file to a local path selected via ivy."
+(defun my/copy-file-to-local ()
+  "Copy the current file to a destination selected via `read-file-name'."
   (interactive)
   (unless buffer-file-name
     (user-error "Not visiting a file"))
-  (unless (file-remote-p buffer-file-name)
-    (user-error "Not a remote file"))
   (let* ((remote-file buffer-file-name)
          (filename (file-name-nondirectory remote-file))
          (default-dest (expand-file-name filename "~"))
@@ -1320,7 +1239,7 @@ Uses ripgrep if available, falls back to grep. Shows relative paths and highligh
     (copy-file remote-file local-dest t)  ; t = overwrite
     (message "Copied → %s" local-dest)))
 
-(bind-key "C-c c" #'my/tramp-rpc-copy-to-local)
+(bind-key "C-c c" #'my/copy-file-to-local)
 
 (defun my/eat-local ()
   "Open eat in local directory, ignoring TRAMP default-directory."

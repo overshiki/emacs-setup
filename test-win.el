@@ -1,3 +1,10 @@
+;;; .emacs-windows --- Windows-compatible Emacs configuration -*- lexical-binding: t -*-
+;;; Commentary:
+;;; Standalone config for Windows Emacs. All features requiring compiled
+;;; native modules or external binaries (vterm, tramp-rpc, rime) are removed.
+;;; Use install-windows.bat to copy this file to ~/.emacs on Windows.
+;;; Code:
+
 (require 'package)
 (require 'bind-key)
 
@@ -51,7 +58,7 @@
  ;; If you edit it by hand, you could mess it up, so be careful.
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
- '(default ((t (:family "Ubuntu Mono" :foundry "DAMA" :slant normal :weight normal :height 240 :width normal)))))
+ '(default ((t (:family "Consolas" :slant normal :weight normal :height 240 :width normal)))))
 
 ;; I prefer no theme in the end
 ;; (load-theme 'doom-dark+ :no-confirm)
@@ -815,8 +822,10 @@ In review mode, C-p and C-n scroll the buffer instead of moving point."
 (setq auto-revert-interval 1)            ; Check every second (default is 5)
 (setq revert-without-query '(".*"))      ; Never ask, just reload
 
-(load-file (let ((coding-system-for-read 'utf-8))
-                (shell-command-to-string "agda --emacs-mode locate")))
+;; Agda mode location (safe fallback on Windows if agda is not installed).
+(ignore-errors
+  (load-file (let ((coding-system-for-read 'utf-8))
+               (shell-command-to-string "agda --emacs-mode locate"))))
 
 
 
@@ -1285,7 +1294,6 @@ Uses ripgrep if available, falls back to grep. Shows relative paths and highligh
   (rime-show-candidate 'popup)
   (rime-inline-ascii t)
   (rime-inline-ascii-trigger 'shift-l)
-  (rime-default-schema-id "luna_pinyin_simp")
   :config
   ;; Prevent rime from stalling when system librime is missing
   (unless (file-exists-p (expand-file-name "librime-emacs.so"

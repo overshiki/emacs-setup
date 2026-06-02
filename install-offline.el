@@ -56,7 +56,16 @@
 
 ;; tramp is installed from the elpa/ snapshot (GNU ELPA version >= 2.8.1.4)
 
-;; --- 4. Install fonts ---
+;; --- 4. Check rime module ---
+(message "=== Checking rime module ===")
+(let ((rime-dirs (directory-files target-elpa t "^rime-")))
+  (dolist (dir rime-dirs)
+    (let ((module (expand-file-name "librime-emacs.so" dir)))
+      (if (file-exists-p module)
+          (message "rime module found at %s" module)
+        (message "WARNING: rime module missing in %s. Run M-x rime-compile-module after installing librime-dev, or delete %s and restart Emacs to rebuild." dir dir)))))
+
+;; --- 5. Install fonts ---
 (message "=== Installing fonts ===")
 (let ((font-dir (expand-file-name "~/.local/share/fonts")))
   (make-directory font-dir t)
@@ -73,13 +82,13 @@
   (shell-command "fc-cache -fv")
   (message "Fonts installed"))
 
-;; --- 5. Configure git ---
+;; --- 6. Configure git ---
 (message "=== Configuring git ===")
 (shell-command "git config --global color.ui always")
 (shell-command "git config --global core.pager cat")
 (message "Git configured")
 
-;; --- 6. Copy .emacs to home ---
+;; --- 7. Copy .emacs to home ---
 (message "=== Copying .emacs ===")
 (let ((src ".emacs")
       (dst (expand-file-name "~/.emacs")))
@@ -89,17 +98,17 @@
         (message ".emacs copied to %s" dst))
     (message "Warning: .emacs not found in current directory")))
 
-;; --- 7. Setup ~/.emacs.d ---
+;; --- 8. Setup ~/.emacs.d ---
 (let ((emacs-d-dir (expand-file-name "~/.emacs.d")))
   (unless (file-directory-p emacs-d-dir)
     (make-directory emacs-d-dir)
     (message "Created ~/.emacs.d")))
 
-;; --- 8. Optional Emacs tarball notice ---
+;; --- 9. Optional Emacs tarball notice ---
 (let ((emacs-tarball (expand-file-name "emacs-30.2.tar.xz" download-dir)))
   (when (file-exists-p emacs-tarball)
     (message "Emacs 30.2 source tarball found at %s" emacs-tarball)
-    (message "To build: tar -xJf %s && cd emacs-30.2 && ./configure && make && sudo make install"
+    (message "To build: tar -xJf %s && cd emacs-30.2 && ./configure --with-modules && make && sudo make install"
              emacs-tarball)
     (message "(Requires build dependencies to be pre-installed)")))
 

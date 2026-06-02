@@ -43,4 +43,12 @@
   (shell-command "curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y"))
 (shell-command ". \"$HOME/.cargo/env\" 2>/dev/null; cd ~/lang/elisp/emacs-tramp-rpc/server && cargo build --release")
 
+;; Check librime for emacs-rime
+(message "Checking librime for rime input method...")
+(unless (executable-find "gcc")
+  (message "WARNING: gcc not found. rime module cannot be compiled."))
+(unless (or (file-exists-p "/usr/include/rime_api.h")
+            (file-exists-p "/usr/local/include/rime_api.h"))
+  (message "WARNING: librime headers not found. Install librime-dev (Ubuntu) or librime-devel (Rocky) for rime IME."))
+
 (message "Setup complete.")

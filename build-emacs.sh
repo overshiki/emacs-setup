@@ -8,11 +8,11 @@ if [ -f /etc/os-release ]; then
         *Ubuntu*)
             echo "ubuntu linux"
             sudo apt-get update
-            sudo apt-get install -y libgnutls28-dev libtinfo-dev pkg-config libgccjit-12-dev ripgrep
+            sudo apt-get install -y libgnutls28-dev libtinfo-dev pkg-config libgccjit-12-dev ripgrep librime-dev
             ;;
         *Rocky*)
             echo "rocky linux"
-            sudo yum install -y gnutls pkg-config gnutls-devel ncurses-devel zlib zlib-devel libgccjit libgccjit-devel ripgrep
+            sudo yum install -y gnutls pkg-config gnutls-devel ncurses-devel zlib zlib-devel libgccjit libgccjit-devel ripgrep librime-devel
             ;;
         *)
             echo "system not recognized"
@@ -29,4 +29,4 @@ wget -c https://mirror.ossplanet.net/gnu/emacs/emacs-30.2.tar.xz
 tar -xvf emacs-30.2.tar.xz
 
 JOBS=$(nproc 2>/dev/null || echo 4)
-cd emacs-30.2 && ./configure && make -j"$JOBS" && sudo make install
+cd emacs-30.2 && ./configure --with-modules && make -j"$JOBS" && sudo make install
