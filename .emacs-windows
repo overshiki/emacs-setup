@@ -678,7 +678,7 @@ In review mode, C-p and C-n scroll the buffer instead of moving point."
 (require 'json)
 
 (defun ssh-login-from-config ()
-  "Read ~/.server JSON with multiple servers, select via ivy, prompt for password, login via TRAMP."
+  "Read ~/.server JSON, select server via ivy, optionally prompt for password, open TRAMP/SSH at default-path."
   (interactive)
   (let* ((config-file (expand-file-name "~/.server"))
          (json-data (json-read-file config-file))
@@ -689,17 +689,23 @@ In review mode, C-p and C-n scroll the buffer instead of moving point."
          (server-config (cdr (assoc server-name servers)))
          (user (cdr (assoc 'user server-config)))
          (ip (cdr (assoc 'ip server-config)))
-         (passwd (read-passwd (format "Password for %s@%s: " user ip))))
+         (is-passwd-required
+          (let ((v (cdr (assoc 'is-passwd-required server-config))))
+            (not (eq v :json-false))))   ; default true
+         (default-path (or (cdr (assoc 'default-path server-config)) "/"))
+         (default-path-expanded
+          (if (string-prefix-p "/" default-path)
+              default-path
+            (concat "~/" default-path))))
     (when (or (null user) (null ip))
       (error "Missing 'user' or 'ip' for server %s" server-name))
-    ;; Temporarily cache password for this TRAMP session
-    (let ((auth-source-creation-prompts
-           `((user . ,user) (host . ,ip) (secret . ,passwd))))
-      (auth-source-remember `(:host ,ip :user ,user :protocol "ssh")
-                            `((secret . ,passwd))))
-    ;; (find-file (format "/ssh:%s@%s:/" user ip))
-    (find-file (format "/rpc:%s@%s:/" user ip))
-    (message "Connecting to %s@%s..." user ip)))
+    (when is-passwd-required
+      (let ((passwd (read-passwd (format "Password for %s@%s: " user ip))))
+        (auth-source-remember `(:host ,ip :user ,user :protocol "ssh")
+                              `((secret . ,passwd)))))
+    ;; (find-file (format "/ssh:%s@%s:%s" user ip default-path-expanded))
+    (find-file (format "/ssh:%s@%s:%s" user ip default-path-expanded))
+    (message "Connecting to %s@%s:%s..." user ip default-path-expanded)))
 ;; Bind to C-c S
 (bind-key "C-c S" 'ssh-login-from-config)
 
