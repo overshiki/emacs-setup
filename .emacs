@@ -37,15 +37,15 @@
                            go-mode grip-mode gruber-darker-theme
                            rime
                            haskell-mode highlight-indent-guides
-                           highlight-parentheses jedi julia-mode
-                           lsp-haskell markdown-preview-mode
+                           highlight-numbers highlight-parentheses jedi
+                           julia-mode lsp-haskell markdown-preview-mode
                            math-preview mathjax matlab-mode
                            merlin-eldoc msgpack multiple-cursors
                            ninja-mode racket-mode rust-mode scala-mode
                            shrface space-theming spacemacs-theme
                            swiper-helm term-toggle texfrag toml-mode
-                           transpose-frame treemacs tuareg valign w3m
-                           wgrep-ag yaml-mode)))
+                           transpose-frame treemacs treesit-auto tuareg
+                           valign w3m wgrep-ag yaml-mode)))
 (custom-set-faces
  ;; custom-set-faces was added by Custom.
  ;; If you edit it by hand, you could mess it up, so be careful.
@@ -125,6 +125,30 @@
 (use-package racket-mode :ensure t)
 (use-package tuareg :ensure t)
 (use-package haskell-mode :ensure t)
+
+;; ── Syntax highlighting enhancements ─────────────────────
+(use-package highlight-numbers
+  :ensure t
+  :hook (prog-mode . highlight-numbers-mode))
+
+(use-package treesit-auto
+  :ensure t
+  :custom
+  (treesit-auto-install 'prompt)
+  :config
+  (treesit-auto-add-to-auto-mode-alist 'all)
+  (global-treesit-auto-mode))
+
+(defun my/font-lock-function-calls ()
+  "Highlight function/macro calls as `font-lock-function-call-face'."
+  (font-lock-add-keywords
+   nil
+   '(("\\_<\\(\\(?:\\sw\\|\\s_\\)+\\)\\s-*(" 1 'font-lock-function-call-face))
+   'append))
+
+(dolist (hook '(python-mode-hook python-ts-mode-hook
+                julia-mode-hook julia-ts-mode-hook))
+  (add-hook hook #'my/font-lock-function-calls))
 
 (bind-key "C-;" 'comment-line)
 
@@ -894,8 +918,25 @@ In review mode, C-p and C-n scroll the buffer instead of moving point."
         ;; Use face-spec-set so colors survive face-spec-recalc on theme changes.
         (face-spec-set face `((t (:background ,color))))))))
 
+(defun my/set-syntax-highlight-faces-for-theme (&rest _)
+  "Set colors for function-call and number faces based on the active theme."
+  (let ((is-dark (member 'doom-ayu-dark custom-enabled-themes)))
+    (if is-dark
+        (progn
+          (face-spec-set 'font-lock-function-call-face
+                         '((t (:foreground "#61afef"))))
+          (face-spec-set 'font-lock-number-face
+                         '((t (:foreground "#d19a66" :weight normal)))))
+      (progn
+        (face-spec-set 'font-lock-function-call-face
+                       '((t (:foreground "#0066cc"))))
+        (face-spec-set 'font-lock-number-face
+                       '((t (:foreground "#b35900" :weight normal))))))))
+
 (advice-add 'load-theme :after #'my/set-highlight-colors-for-theme)
+(advice-add 'load-theme :after #'my/set-syntax-highlight-faces-for-theme)
 (my/set-highlight-colors-for-theme)
+(my/set-syntax-highlight-faces-for-theme)
 
 (defvar le/face-ring-allocated nil
   "List of plists (:face FACE :symbol SYMBOL :regexp REGEXP) tracking in-use colors.")
