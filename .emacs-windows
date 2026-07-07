@@ -134,6 +134,7 @@
 
 (use-package treesit-auto
   :ensure t
+  :if (fboundp 'treesit-language-available-p)
   :custom
   (treesit-auto-install 'prompt)
   :config
