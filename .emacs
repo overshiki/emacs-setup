@@ -590,6 +590,7 @@ In review mode, C-p and C-n scroll the buffer instead of moving point."
   :keymap my/review-mode-map)
 
 (bind-key "C-c r" #'my/review-mode)
+(bind-key "C-c v" #'revert-buffer)
 
 (bind-key "M-w" 'kill-region)
 (bind-key "C-w" 'kill-ring-save)
@@ -920,17 +921,21 @@ In review mode, C-p and C-n scroll the buffer instead of moving point."
         (face-spec-set face `((t (:background ,color))))))))
 
 (defun my/set-syntax-highlight-faces-for-theme (&rest _)
-  "Set colors for function-call and number faces based on the active theme."
+  "Set syntax-highlight face weights/colors after theme changes."
+  ;; Function definitions, keywords, and types: keep theme color, but never bold.
+  (set-face-attribute 'font-lock-function-name-face nil :weight 'normal)
+  (set-face-attribute 'font-lock-keyword-face nil :weight 'normal)
+  (set-face-attribute 'font-lock-type-face nil :weight 'normal)
   (let ((is-dark (member 'doom-ayu-dark custom-enabled-themes)))
     (if is-dark
         (progn
           (face-spec-set 'font-lock-function-call-face
-                         '((t (:foreground "#61afef"))))
+                         '((t (:foreground "#61afef" :weight normal))))
           (face-spec-set 'font-lock-number-face
                          '((t (:foreground "#d19a66" :weight normal)))))
       (progn
         (face-spec-set 'font-lock-function-call-face
-                       '((t (:foreground "#0066cc"))))
+                       '((t (:foreground "#0066cc" :weight normal))))
         (face-spec-set 'font-lock-number-face
                        '((t (:foreground "#b35900" :weight normal))))))))
 
