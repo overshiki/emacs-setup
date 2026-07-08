@@ -38,8 +38,9 @@
  '(package-selected-packages
    '(auto-highlight-symbol cape clipmon cmake-mode company corfu counsel
                            dired-sidebar diredfl dirvish doom-themes
-                           eat elixir-mode futhark-mode git-gutter
-                           go-mode grip-mode gruber-darker-theme
+                           diff-hl eat elixir-mode futhark-mode
+                           git-timemachine go-mode grip-mode gruber-darker-theme
+                           magit
                            rime
                            haskell-mode highlight-indent-guides
                            highlight-numbers highlight-parentheses jedi
@@ -521,10 +522,23 @@ This command does not push erased text to kill-ring."
 ;; (add-hook 'haskell-cabal-mode-hook 'eglot-ensure)
 ;; (add-hook 'racket-mode-hook 'eglot-ensure)
 
-(use-package git-gutter
+;; ── Git integration ──────────────────────────────────────
+(use-package magit
   :ensure t
+  :bind (("C-x g" . magit-status)
+         ("C-x M-g" . magit-dispatch)))
+
+(use-package diff-hl
+  :ensure t
+  :hook ((prog-mode . diff-hl-mode)
+         (dired-mode . diff-hl-dired-mode))
   :config
-  (global-git-gutter-mode +1))
+  (global-diff-hl-mode +1))
+
+(use-package git-timemachine
+  :ensure t
+  :defer t
+  :commands (git-timemachine))
 
 (unless (file-exists-p "~/.emacs.d/tmp/tramp-autosaves/")
   (make-directory "~/.emacs.d/tmp/tramp-autosaves/" t))
