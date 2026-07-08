@@ -11,6 +11,11 @@
 ;; tramp-rpc requires >= 2.8.1.4, so we ensure the ELPA copy takes precedence.
 (require 'tramp)
 
+;; Suppress harmless RPC lock-file warnings when reverting buffers.
+;; These occur because TRAMP-RPC cannot find Emacs' local lock-file symlinks.
+(require 'warnings)
+(add-to-list 'warning-suppress-log-types '(unlock-file))
+
 ;; Enable ANSI color rendering in M-x shell
 (add-hook 'shell-mode-hook 'ansi-color-for-comint-mode-on)
 
