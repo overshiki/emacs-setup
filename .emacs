@@ -1,3 +1,5 @@
+;;; -*- lexical-binding: t -*-
+
 (require 'package)
 (require 'bind-key)
 
@@ -11,6 +13,21 @@
 ;; tramp-rpc requires >= 2.8.1.4, so we ensure the ELPA copy takes precedence.
 (require 'tramp)
 
+;; Append extra directories from ~/.exec-paths to `exec-path'.
+(defun my/load-exec-paths ()
+  "Append entries from ~/.exec-paths to `exec-path'."
+  (let ((file (expand-file-name "~/.exec-paths")))
+    (when (file-exists-p file)
+      (with-temp-buffer
+        (insert-file-contents file)
+        (goto-char (point-min))
+        (while (not (eobp))
+          (let ((line (string-trim (thing-at-point 'line t))))
+            (unless (or (string-empty-p line) (string-prefix-p "#" line))
+              (add-to-list 'exec-path (expand-file-name line))))
+          (forward-line 1))))))
+(my/load-exec-paths)
+
 ;; Suppress harmless RPC lock-file warnings when reverting buffers.
 ;; These occur because TRAMP-RPC cannot find Emacs' local lock-file symlinks.
 (require 'warnings)
@@ -19,39 +36,28 @@
 ;; Enable ANSI color rendering in M-x shell
 (add-hook 'shell-mode-hook 'ansi-color-for-comint-mode-on)
 
-;;; -*- lexical-binding: t -*-
 (custom-set-variables
  ;; custom-set-variables was added by Custom.
  ;; If you edit it by hand, you could mess it up, so be careful.
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
- '(custom-enabled-themes '(doom-ayu-dark))
- '(custom-safe-themes
-   '("9af2b1c0728d278281d87dc91ead7f5d9f2287b1ed66ec8941e97ab7a6ab73c0"
-     "5c7720c63b729140ed88cf35413f36c728ab7c70f8cd8422d9ee1cedeb618de5"
-     "599f72b66933ea8ba6fce3ae9e5e0b4e00311c2cbf01a6f46ac789227803dd96"
-     "166a2faa9dc5b5b3359f7a31a09127ebf7a7926562710367086fcc8fc72145da"
-     "5244ba0273a952a536e07abaad1fdf7c90d7ebb3647f36269c23bfd1cf20b0b8"
-     "73ae9ba31609c7cb11be2012f06ffb5e3c9c34886ea60cc9c2a72e4e2a281ddb"
-     "9b9d7a851a8e26f294e778e02c8df25c8a3b15170e6f9fd6965ac5f2544ef2a9"
-     default))
  '(package-selected-packages
    '(auto-highlight-symbol cape clipmon cmake-mode company corfu counsel
-                           dired-sidebar diredfl dirvish doom-themes
-                           diff-hl eat elixir-mode futhark-mode
-                           git-timemachine go-mode grip-mode gruber-darker-theme
-                           magit
-                           rime
-                           haskell-mode highlight-indent-guides
-                           highlight-numbers highlight-parentheses jedi
-                           julia-mode lsp-haskell markdown-preview-mode
-                           math-preview mathjax matlab-mode
-                           merlin-eldoc msgpack multiple-cursors
-                           ninja-mode racket-mode rust-mode scala-mode
-                           shrface space-theming spacemacs-theme
-                           swiper-helm term-toggle texfrag toml-mode
-                           transpose-frame treemacs treesit-auto tuareg
-                           valign w3m wgrep-ag yaml-mode)))
+                           diff-hl dired-sidebar diredfl dirvish
+                           doom-themes eat elixir-mode futhark-mode
+                           git-timemachine go-mode gptel grip-mode
+                           gruber-darker-theme haskell-mode
+                           highlight-indent-guides highlight-numbers
+                           highlight-parentheses imenu-list jedi
+                           julia-mode lsp-haskell magit
+                           markdown-preview-mode math-preview mathjax
+                           matlab-mode merlin-eldoc msgpack
+                           multiple-cursors ninja-mode racket-mode
+                           rime rust-mode scala-mode shrface
+                           space-theming spacemacs-theme swiper-helm
+                           term-toggle texfrag toml-mode
+                           transpose-frame treemacs treesit-auto
+                           tuareg valign w3m wgrep-ag yaml-mode)))
 (custom-set-faces
  ;; custom-set-faces was added by Custom.
  ;; If you edit it by hand, you could mess it up, so be careful.
@@ -61,7 +67,7 @@
 
 ;; I prefer no theme in the end
 ;; (load-theme 'doom-dark+ :no-confirm)
-(load-theme 'doom-ayu-dark :no-confirm)
+;; (load-theme 'doom-ayu-dark :no-confirm)
 
 (use-package doom-themes
   :ensure t
@@ -374,7 +380,11 @@ This command does not push erased text to kill-ring."
 
 (use-package lsp-mode
   :ensure t
-  :commands (lsp lsp-deferred))
+  :commands (lsp lsp-deferred)
+  :hook ((python-mode . lsp)
+         (python-ts-mode . lsp))
+  :init
+  (setq lsp-auto-guess-root t))
 
 (defun haskell-format-buffer-with-ormolu ()
   "Format the current Haskell buffer using ormolu."
@@ -383,11 +393,19 @@ This command does not push erased text to kill-ring."
     (save-excursion
       (shell-command-on-region (point-min) (point-max) "ormolu" (current-buffer) t))))
 
+(setq lsp-headerline-breadcrumb-enable nil)
+(setq lsp-lens-enable nil)
+(setq lsp-modeline-code-actions-enable nil)
+(setq lsp-modeline-diagnostics-enable nil)
+(setq lsp-diagnostics-provider :flycheck)  ;; or :none temporarily
+(setq lsp-completion-provider :capf)
+(setq lsp-enable-file-watchers nil)
+
 (use-package lsp-haskell
   :ensure t
   :after lsp-mode
-  :hook ((haskell-mode . lsp)
-         (haskell-literate-mode . lsp))
+  :hook ((haskell-mode . lsp-deferred)
+         (haskell-literate-mode . lsp-deferred))
   :init
   (add-hook 'haskell-mode-hook
             (lambda ()
@@ -407,10 +425,6 @@ This command does not push erased text to kill-ring."
                           (setq flymake-start-on-flymake-mode t)
                           (flymake-mode 1))))
 
-;; (use-package lsp-mode
-;;   :hook (python-mode . lsp)
-;;   :config
-;;   (setq lsp-pyls-server-command '("pylsp")))
 
 (use-package lsp-ui
   :ensure t
@@ -421,8 +435,58 @@ This command does not push erased text to kill-ring."
         lsp-ui-sideline-show-diagnostics t
         lsp-ui-sideline-diagnostic-max-lines 3
         lsp-ui-sideline-delay 0.5))
-            
-          
+
+;; ── LLM writing assistant (Phase 1: on-demand via gptel) ──
+;; Uses DeepSeek API. Key is read from ~/.deepseek_key.
+(defun my/load-api-key-from-file (filename)
+  "Read the first non-comment line from FILENAME as an API key."
+  (let ((file (expand-file-name filename)))
+    (if (file-exists-p file)
+        (with-temp-buffer
+          (insert-file-contents file)
+          (goto-char (point-min))
+          (let ((key nil))
+            (while (and (not key) (not (eobp)))
+              (let ((line (string-trim (thing-at-point 'line t))))
+                (unless (or (string-empty-p line) (string-prefix-p "#" line))
+                  (setq key line)))
+              (forward-line 1))
+            key))
+      (message "API key file not found: %s" file)
+      nil)))
+
+(use-package gptel
+  :ensure t
+  :config
+  (setq gptel-model 'deepseek-chat)
+  (setq gptel-backend
+        (gptel-make-openai "DeepSeek"
+          :host "api.deepseek.com"
+          :endpoint "/chat/completions"
+          :key (my/load-api-key-from-file "~/.deepseek_key")
+          :models '(deepseek-chat deepseek-reasoner)
+          :stream t)))
+
+(defun my/gptel-improve-writing (start end)
+  "Improve selected English text with GPTel.
+The improved text is inserted at the region, replacing the original."
+  (interactive "r")
+  (let ((text (buffer-substring-no-properties start end))
+        (start-marker (copy-marker start))
+        (end-marker (copy-marker end)))
+    (gptel-request
+     (format "Improve the following English writing. Fix grammar, clarity, and style. Return only the improved text, no explanation.\n\n%s" text)
+     :callback
+     (lambda (response _info)
+       (if response
+           (progn
+             (delete-region start-marker end-marker)
+             (goto-char start-marker)
+             (insert response)
+             (message "Writing improved"))
+         (message "No response from LLM"))))))
+
+(bind-key "C-c w" #'my/gptel-improve-writing)
 
 (bind-key "C-x p" 'previous-buffer)
 (bind-key "C-x C-p" 'previous-buffer)
@@ -440,8 +504,16 @@ This command does not push erased text to kill-ring."
 
 (use-package counsel
   :ensure t
-  :bind (("M-s" . counsel-ag)
-         ("C-c C-s" . my/toggle-counsel-rg-right)))
+  :bind (("M-s" . my/counsel-ag-thing-at-point)
+         ("C-c C-s" . my/toggle-counsel-rg-right))
+  :config
+  (defun my/counsel-ag-thing-at-point ()
+    "Search for the thing at point using `counsel-ag'."
+    (interactive)
+    (let ((input (ivy-thing-at-point)))
+      (when (use-region-p)
+        (deactivate-mark))
+      (counsel-ag (and input (regexp-quote input))))))
 
 
 (bind-key "C-k" 'kill-line)
@@ -1403,3 +1475,7 @@ Uses ripgrep if available, falls back to grep. Shows relative paths and highligh
 (use-package dired-sidebar
   :ensure t
   :bind ("C-]" . dired-sidebar-toggle-sidebar))
+
+(use-package imenu-list
+  :bind ("C-c i" . imenu-list-smart-toggle)
+  :custom (imenu-list-focus-after-entry t))

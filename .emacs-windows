@@ -1,6 +1,8 @@
 ;; .emacs-windows --- Windows-compatible Emacs config -*- lexical-binding: t -*-
 ;; Generated from .emacs — do not edit manually.
 
+;;; -*- lexical-binding: t -*-
+
 (require 'package)
 (require 'bind-key)
 
@@ -13,6 +15,21 @@
 ;; Load ELPA tramp early before any package can pull in the built-in version.
 (require 'tramp)
 
+;; Append extra directories from ~/.exec-paths to `exec-path'.
+(defun my/load-exec-paths ()
+  "Append entries from ~/.exec-paths to `exec-path'."
+  (let ((file (expand-file-name "~/.exec-paths")))
+    (when (file-exists-p file)
+      (with-temp-buffer
+        (insert-file-contents file)
+        (goto-char (point-min))
+        (while (not (eobp))
+          (let ((line (string-trim (thing-at-point 'line t))))
+            (unless (or (string-empty-p line) (string-prefix-p "#" line))
+              (add-to-list 'exec-path (expand-file-name line))))
+          (forward-line 1))))))
+(my/load-exec-paths)
+
 ;; Suppress harmless RPC lock-file warnings when reverting buffers.
 ;; These occur because TRAMP-RPC cannot find Emacs' local lock-file symlinks.
 (require 'warnings)
@@ -21,7 +38,6 @@
 ;; Enable ANSI color rendering in M-x shell
 (add-hook 'shell-mode-hook 'ansi-color-for-comint-mode-on)
 
-;;; -*- lexical-binding: t -*-
 (custom-set-variables
  ;; custom-set-variables was added by Custom.
  ;; If you edit it by hand, you could mess it up, so be careful.
@@ -42,7 +58,7 @@
                            dired-sidebar diredfl dirvish doom-themes
                            diff-hl eat elixir-mode futhark-mode
                            git-timemachine go-mode grip-mode gruber-darker-theme
-                           magit
+                           gptel magit
                            haskell-mode highlight-indent-guides
                            highlight-numbers highlight-parentheses jedi
                            julia-mode lsp-haskell markdown-preview-mode
@@ -375,7 +391,11 @@ This command does not push erased text to kill-ring."
 
 (use-package lsp-mode
   :ensure t
-  :commands (lsp lsp-deferred))
+  :commands (lsp lsp-deferred)
+  :hook ((python-mode . lsp)
+         (python-ts-mode . lsp))
+  :init
+  (setq lsp-auto-guess-root t))
 
 (defun haskell-format-buffer-with-ormolu ()
   "Format the current Haskell buffer using ormolu."
@@ -408,10 +428,6 @@ This command does not push erased text to kill-ring."
                           (setq flymake-start-on-flymake-mode t)
                           (flymake-mode 1))))
 
-;; (use-package lsp-mode
-;;   :hook (python-mode . lsp)
-;;   :config
-;;   (setq lsp-pyls-server-command '("pylsp")))
 
 (use-package lsp-ui
   :ensure t
@@ -422,8 +438,58 @@ This command does not push erased text to kill-ring."
         lsp-ui-sideline-show-diagnostics t
         lsp-ui-sideline-diagnostic-max-lines 3
         lsp-ui-sideline-delay 0.5))
-            
-          
+
+;; ── LLM writing assistant (Phase 1: on-demand via gptel) ──
+;; Uses DeepSeek API. Key is read from ~/.deepseek_key.
+(defun my/load-api-key-from-file (filename)
+  "Read the first non-comment line from FILENAME as an API key."
+  (let ((file (expand-file-name filename)))
+    (if (file-exists-p file)
+        (with-temp-buffer
+          (insert-file-contents file)
+          (goto-char (point-min))
+          (let ((key nil))
+            (while (and (not key) (not (eobp)))
+              (let ((line (string-trim (thing-at-point 'line t))))
+                (unless (or (string-empty-p line) (string-prefix-p "#" line))
+                  (setq key line)))
+              (forward-line 1))
+            key))
+      (message "API key file not found: %s" file)
+      nil)))
+
+(use-package gptel
+  :ensure t
+  :config
+  (setq gptel-model 'deepseek-chat)
+  (setq gptel-backend
+        (gptel-make-openai "DeepSeek"
+          :host "api.deepseek.com"
+          :endpoint "/chat/completions"
+          :key (my/load-api-key-from-file "~/.deepseek_key")
+          :models '(deepseek-chat deepseek-reasoner)
+          :stream t)))
+
+(defun my/gptel-improve-writing (start end)
+  "Improve selected English text with GPTel.
+The improved text is inserted at the region, replacing the original."
+  (interactive "r")
+  (let ((text (buffer-substring-no-properties start end))
+        (start-marker (copy-marker start))
+        (end-marker (copy-marker end)))
+    (gptel-request
+     (format "Improve the following English writing. Fix grammar, clarity, and style. Return only the improved text, no explanation.\n\n%s" text)
+     :callback
+     (lambda (response _info)
+       (if response
+           (progn
+             (delete-region start-marker end-marker)
+             (goto-char start-marker)
+             (insert response)
+             (message "Writing improved"))
+         (message "No response from LLM"))))))
+
+(bind-key "C-c w" #'my/gptel-improve-writing)
 
 (bind-key "C-x p" 'previous-buffer)
 (bind-key "C-x C-p" 'previous-buffer)
@@ -441,8 +507,16 @@ This command does not push erased text to kill-ring."
 
 (use-package counsel
   :ensure t
-  :bind (("M-s" . counsel-ag)
-         ("C-c C-s" . my/toggle-counsel-rg-right)))
+  :bind (("M-s" . my/counsel-ag-thing-at-point)
+         ("C-c C-s" . my/toggle-counsel-rg-right))
+  :config
+  (defun my/counsel-ag-thing-at-point ()
+    "Search for the thing at point using `counsel-ag'."
+    (interactive)
+    (let ((input (ivy-thing-at-point)))
+      (when (use-region-p)
+        (deactivate-mark))
+      (counsel-ag (and input (regexp-quote input))))))
 
 
 (bind-key "C-k" 'kill-line)
