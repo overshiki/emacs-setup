@@ -41,15 +41,20 @@
  ;; If you edit it by hand, you could mess it up, so be careful.
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
+ '(custom-safe-themes
+   '("73ae9ba31609c7cb11be2012f06ffb5e3c9c34886ea60cc9c2a72e4e2a281ddb"
+     "01a9797244146bbae39b18ef37e6f2ca5bebded90d9fe3a2f342a9e863aaa4fd"
+     default))
  '(package-selected-packages
-   '(auto-highlight-symbol cape clipmon cmake-mode company corfu counsel
-                           diff-hl dired-sidebar diredfl dirvish
-                           doom-themes eat elixir-mode futhark-mode
-                           git-timemachine go-mode gptel grip-mode
-                           gruber-darker-theme haskell-mode
+   '(auto-highlight-symbol bufler cape clipmon cmake-mode company corfu
+                           counsel diff-hl dired-sidebar diredfl
+                           dirvish doom-themes eat elixir-mode
+                           flycheck futhark-mode git-timemachine
+                           go-mode gptel grip-mode gruber-darker-theme
+                           haskell-mode helm-bufler
                            highlight-indent-guides highlight-numbers
                            highlight-parentheses imenu-list jedi
-                           julia-mode lsp-haskell magit
+                           julia-mode lsp-haskell lsp-julia magit
                            markdown-preview-mode math-preview mathjax
                            matlab-mode merlin-eldoc msgpack
                            multiple-cursors ninja-mode racket-mode
@@ -57,7 +62,8 @@
                            space-theming spacemacs-theme swiper-helm
                            term-toggle texfrag toml-mode
                            transpose-frame treemacs treesit-auto
-                           tuareg valign w3m wgrep-ag yaml-mode)))
+                           tuareg valign w3m wgrep-ag yaml-mode
+                           yasnippet)))
 (custom-set-faces
  ;; custom-set-faces was added by Custom.
  ;; If you edit it by hand, you could mess it up, so be careful.
@@ -67,7 +73,7 @@
 
 ;; I prefer no theme in the end
 ;; (load-theme 'doom-dark+ :no-confirm)
-;; (load-theme 'doom-ayu-dark :no-confirm)
+(load-theme 'doom-ayu-dark :no-confirm)
 
 (use-package doom-themes
   :ensure t
@@ -378,13 +384,75 @@ This command does not push erased text to kill-ring."
 ;; ;; use eglot instead
 ;; language servers
 
+;; 1. Disable merlin if it's being loaded elsewhere
+(with-eval-after-load 'merlin
+  (global-merlin-mode -1))
+
+;; 2. Ensure tuareg uses LSP, not merlin
+(use-package tuareg
+  :mode ("\\.ml[iylp]?\\'" . tuareg-mode)
+  :config
+  ;; Prevent merlin from auto-starting
+  (setq merlin-command nil)
+  :hook ((tuareg-mode . (lambda ()
+                          ;; Disable merlin if somehow active
+                          (when (bound-and-true-p merlin-mode)
+                            (merlin-mode -1))
+                          ;; LSP will provide eldoc instead
+                          (lsp-deferred)))))
+
+(use-package yasnippet
+  :hook ((tuareg-mode . yas-minor-mode))
+  :config
+  (yas-reload-all))
+
+(use-package flycheck
+  :hook ((tuareg-mode . flycheck-mode)))
+
+(use-package julia-mode
+  :mode "\\.jl\\'")
+
+(let ((julia-bin (expand-file-name "~/lib/julia-1.12.5/bin")))
+  (setenv "PATH" (concat julia-bin ":" (getenv "PATH")))
+  (add-to-list 'exec-path julia-bin))
+
+(use-package lsp-julia
+  :after lsp-mode
+  :config
+  ;; Point to your default Julia environment
+  ;; match your Julia version: ls ~/.julia/environments/
+  (setq lsp-julia-default-environment "~/.julia/environments/v1.12"))
+
 (use-package lsp-mode
   :ensure t
   :commands (lsp lsp-deferred)
   :hook ((python-mode . lsp)
-         (python-ts-mode . lsp))
+         (python-ts-mode . lsp)
+         (tuareg-mode . lsp-deferred)
+         (tuareg-mode . lsp-inlay-hints-mode)
+         (julia-mode . lsp-deferred)
+         )
   :init
-  (setq lsp-auto-guess-root t))
+  (setq lsp-auto-guess-root t)
+  :config
+  (setq lsp-ocaml-lsp-server-command "ocamllsp")
+  ;; Ensure lsp provides eldoc
+  (setq lsp-eldoc-enable-hover t)
+
+  (setq lsp-inlay-hint-enable t)
+  (setq lsp-signature-auto-activate t)
+  (setq lsp-signature-render-documentation t)
+  (setq lsp-disabled-clients '(semgrep-ls))
+  )
+
+(use-package lsp-ui
+  :hook (lsp-mode . lsp-ui-mode)
+  :config
+  (setq lsp-ui-doc-enable t)
+  (setq lsp-ui-doc-position 'at-point)
+  (setq lsp-ui-doc-delay 0.5)
+  (setq lsp-ui-sideline-enable nil))  ; disable if too cluttered
+
 
 (defun haskell-format-buffer-with-ormolu ()
   "Format the current Haskell buffer using ormolu."
@@ -688,28 +756,6 @@ In review mode, C-p and C-n scroll the buffer instead of moving point."
 (bind-key "C-v" 'yank)
 
 (setq inhibit-startup-screen t)
-
-(let ((opam-share (ignore-errors (car (process-lines "opam" "var" "share")))))
- (when (and opam-share (file-directory-p opam-share))
-  ;; Register Merlin
-  (add-to-list 'load-path (expand-file-name "emacs/site-lisp" opam-share))
-  (autoload 'merlin-mode "merlin" nil t nil)
-  ;; Automatically start it in OCaml buffers
-  (add-hook 'tuareg-mode-hook 'merlin-mode t)
-  (add-hook 'caml-mode-hook 'merlin-mode t)
-  ;; Use opam switch to lookup ocamlmerlin binary
-  (setq merlin-command 'opam)
-  ;; To easily change opam switches within a given Emacs session, you can
-  ;; install the minor mode https://github.com/ProofGeneral/opam-switch-mode
-  ;; and use one of its "OPSW" menus.
-  ))
-
-(use-package merlin-eldoc
-  :ensure t
-  :after merlin
-  :config
-  (merlin-eldoc-setup))
-
 
 (defvar dired-jump-history nil
   "Stack of visited directories for C-x C-<down> navigation.")
@@ -1479,3 +1525,8 @@ Uses ripgrep if available, falls back to grep. Shows relative paths and highligh
 (use-package imenu-list
   :bind ("C-c i" . imenu-list-smart-toggle)
   :custom (imenu-list-focus-after-entry t))
+
+(use-package bufler
+  :bind (("C-c b" . bufler-sidebar))
+  :config
+  (setq bufler-sidebar-width 35))
