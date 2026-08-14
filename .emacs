@@ -1545,3 +1545,23 @@ Uses ripgrep if available, falls back to grep. Shows relative paths and highligh
   (setq ivy-posframe-display-functions-alist
         '((t . ivy-posframe-display-at-frame-center)))
   (ivy-posframe-mode 1))
+
+;; Ensure the posframe can grow wide enough for long paths
+(setq ivy-posframe-width 120        ; absolute max width
+      ivy-posframe-min-width 60     ; never narrower than this
+      ivy-posframe-height 20        ; absolute max height
+      ivy-posframe-min-height 6)    ; never shorter than this
+
+;; Allow the frame to resize dynamically based on content
+(setq ivy-posframe-parameters
+      '((left-fringe . 8)
+        (right-fringe . 8)
+        (internal-border-width . 6)
+        (undecorated . t)
+        (minibuffer . nil)
+        (no-special-glyphs . t)))
+
+;; If the prompt itself is extremely long, Ivy may push candidates off-screen.
+;; This tells Ivy to abbreviate the prompt path so candidates remain visible:
+(setq ivy-fixed-height-minibuffer nil)
+(setq ivy-truncate-lines nil)   ; allow wrapping inside the posframe
