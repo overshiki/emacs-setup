@@ -1182,12 +1182,16 @@ In review mode, C-p and C-n scroll the buffer instead of moving point."
   (message "All persistent highlights cleared, ring reset"))
 
 (defun le/toggle-persistent-highlight ()
-  "Toggle persistent highlight for symbol at point.
-Highlight if not already highlighted; unhighlight if it is."
+  "Toggle persistent highlight for symbol at point or active region.
+Highlight if not already highlighted; unhighlight if it is.
+With an active region, highlight all occurrences of the region text."
   (interactive)
-  (let ((sym (le/symbol-at-point)))
+  (let* ((sym (if (use-region-p)
+                   (buffer-substring-no-properties (region-beginning) (region-end))
+                 (le/symbol-at-point)))
+         (is-region (use-region-p)))
     (unless sym
-      (user-error "No symbol at point"))
+      (user-error "No symbol at point or active region"))
     (let ((entry (le/find-entry-by-symbol sym)))
       (if entry
           ;; Already highlighted → unhighlight
@@ -1197,10 +1201,13 @@ Highlight if not already highlighted; unhighlight if it is."
             (le/release-face face)
             (message "Removed persistent highlight: %s (reclaimed %s)" sym face))
         ;; Not highlighted → highlight
-        (let* ((face (le/allocate-face))
-               (stored-regexp (highlight-regexp (concat "\\<" (regexp-quote sym) "\\>") face)))
+        (let* ((regexp (if is-region
+                           (regexp-quote sym)
+                         (concat "\\<" (regexp-quote sym) "\\>")))
+               (face (le/allocate-face))
+               (stored-regexp (highlight-regexp regexp face)))
           (unless stored-regexp
-            (setq stored-regexp (concat "\\<" (regexp-quote sym) "\\>")))
+            (setq stored-regexp regexp))
           (push (list :face face :symbol sym :regexp stored-regexp) le/face-ring-allocated)
           (message "Persistently highlighted: %s (%s)" sym face))))))
 

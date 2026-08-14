@@ -43,32 +43,29 @@
  ;; If you edit it by hand, you could mess it up, so be careful.
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
- '(custom-enabled-themes '(doom-ayu-dark))
  '(custom-safe-themes
-   '("9af2b1c0728d278281d87dc91ead7f5d9f2287b1ed66ec8941e97ab7a6ab73c0"
-     "5c7720c63b729140ed88cf35413f36c728ab7c70f8cd8422d9ee1cedeb618de5"
-     "599f72b66933ea8ba6fce3ae9e5e0b4e00311c2cbf01a6f46ac789227803dd96"
-     "166a2faa9dc5b5b3359f7a31a09127ebf7a7926562710367086fcc8fc72145da"
-     "5244ba0273a952a536e07abaad1fdf7c90d7ebb3647f36269c23bfd1cf20b0b8"
-     "73ae9ba31609c7cb11be2012f06ffb5e3c9c34886ea60cc9c2a72e4e2a281ddb"
-     "9b9d7a851a8e26f294e778e02c8df25c8a3b15170e6f9fd6965ac5f2544ef2a9"
+   '("73ae9ba31609c7cb11be2012f06ffb5e3c9c34886ea60cc9c2a72e4e2a281ddb"
+     "01a9797244146bbae39b18ef37e6f2ca5bebded90d9fe3a2f342a9e863aaa4fd"
      default))
  '(package-selected-packages
-   '(auto-highlight-symbol cape clipmon cmake-mode company corfu counsel
-                           dired-sidebar diredfl dirvish doom-themes
-                           diff-hl eat elixir-mode futhark-mode
-                           git-timemachine go-mode grip-mode gruber-darker-theme
-                           gptel magit
-                           haskell-mode highlight-indent-guides
-                           highlight-numbers highlight-parentheses jedi
-                           julia-mode lsp-haskell markdown-preview-mode
-                           math-preview mathjax matlab-mode
-                           merlin-eldoc msgpack multiple-cursors
-                           ninja-mode racket-mode rust-mode scala-mode
-                           shrface space-theming spacemacs-theme
-                           swiper-helm term-toggle texfrag toml-mode
-                           transpose-frame treemacs treesit-auto tuareg
-                           valign w3m wgrep-ag yaml-mode)))
+   '(auto-highlight-symbol bufler cape clipmon cmake-mode company corfu
+                           counsel diff-hl dired-sidebar diredfl
+                           dirvish doom-themes eat elixir-mode
+                           flycheck futhark-mode git-timemachine
+                           go-mode gptel grip-mode gruber-darker-theme
+                           haskell-mode helm-bufler
+                           highlight-indent-guides highlight-numbers
+                           highlight-parentheses imenu-list jedi
+                           julia-mode lsp-haskell lsp-julia magit
+                           markdown-preview-mode math-preview mathjax
+                           matlab-mode merlin-eldoc msgpack
+                           multiple-cursors ninja-mode racket-mode
+                           rime rust-mode scala-mode shrface
+                           space-theming spacemacs-theme swiper-helm
+                           term-toggle texfrag toml-mode
+                           transpose-frame treemacs treesit-auto
+                           tuareg valign w3m wgrep-ag yaml-mode
+                           yasnippet)))
 (custom-set-faces
  ;; custom-set-faces was added by Custom.
  ;; If you edit it by hand, you could mess it up, so be careful.
@@ -389,13 +386,75 @@ This command does not push erased text to kill-ring."
 ;; ;; use eglot instead
 ;; language servers
 
+;; 1. Disable merlin if it's being loaded elsewhere
+(with-eval-after-load 'merlin
+  (global-merlin-mode -1))
+
+;; 2. Ensure tuareg uses LSP, not merlin
+(use-package tuareg
+  :mode ("\\.ml[iylp]?\\'" . tuareg-mode)
+  :config
+  ;; Prevent merlin from auto-starting
+  (setq merlin-command nil)
+  :hook ((tuareg-mode . (lambda ()
+                          ;; Disable merlin if somehow active
+                          (when (bound-and-true-p merlin-mode)
+                            (merlin-mode -1))
+                          ;; LSP will provide eldoc instead
+                          (lsp-deferred)))))
+
+(use-package yasnippet
+  :hook ((tuareg-mode . yas-minor-mode))
+  :config
+  (yas-reload-all))
+
+(use-package flycheck
+  :hook ((tuareg-mode . flycheck-mode)))
+
+(use-package julia-mode
+  :mode "\\.jl\\'")
+
+(let ((julia-bin (expand-file-name "~/lib/julia-1.12.5/bin")))
+  (setenv "PATH" (concat julia-bin ":" (getenv "PATH")))
+  (add-to-list 'exec-path julia-bin))
+
+(use-package lsp-julia
+  :after lsp-mode
+  :config
+  ;; Point to your default Julia environment
+  ;; match your Julia version: ls ~/.julia/environments/
+  (setq lsp-julia-default-environment "~/.julia/environments/v1.12"))
+
 (use-package lsp-mode
   :ensure t
   :commands (lsp lsp-deferred)
   :hook ((python-mode . lsp)
-         (python-ts-mode . lsp))
+         (python-ts-mode . lsp)
+         (tuareg-mode . lsp-deferred)
+         (tuareg-mode . lsp-inlay-hints-mode)
+         (julia-mode . lsp-deferred)
+         )
   :init
-  (setq lsp-auto-guess-root t))
+  (setq lsp-auto-guess-root t)
+  :config
+  (setq lsp-ocaml-lsp-server-command "ocamllsp")
+  ;; Ensure lsp provides eldoc
+  (setq lsp-eldoc-enable-hover t)
+
+  (setq lsp-inlay-hint-enable t)
+  (setq lsp-signature-auto-activate t)
+  (setq lsp-signature-render-documentation t)
+  (setq lsp-disabled-clients '(semgrep-ls))
+  )
+
+(use-package lsp-ui
+  :hook (lsp-mode . lsp-ui-mode)
+  :config
+  (setq lsp-ui-doc-enable t)
+  (setq lsp-ui-doc-position 'at-point)
+  (setq lsp-ui-doc-delay 0.5)
+  (setq lsp-ui-sideline-enable nil))  ; disable if too cluttered
+
 
 (defun haskell-format-buffer-with-ormolu ()
   "Format the current Haskell buffer using ormolu."
@@ -404,11 +463,19 @@ This command does not push erased text to kill-ring."
     (save-excursion
       (shell-command-on-region (point-min) (point-max) "ormolu" (current-buffer) t))))
 
+(setq lsp-headerline-breadcrumb-enable nil)
+(setq lsp-lens-enable nil)
+(setq lsp-modeline-code-actions-enable nil)
+(setq lsp-modeline-diagnostics-enable nil)
+(setq lsp-diagnostics-provider :flycheck)  ;; or :none temporarily
+(setq lsp-completion-provider :capf)
+(setq lsp-enable-file-watchers nil)
+
 (use-package lsp-haskell
   :ensure t
   :after lsp-mode
-  :hook ((haskell-mode . lsp)
-         (haskell-literate-mode . lsp))
+  :hook ((haskell-mode . lsp-deferred)
+         (haskell-literate-mode . lsp-deferred))
   :init
   (add-hook 'haskell-mode-hook
             (lambda ()
@@ -691,28 +758,6 @@ In review mode, C-p and C-n scroll the buffer instead of moving point."
 (bind-key "C-v" 'yank)
 
 (setq inhibit-startup-screen t)
-
-(let ((opam-share (ignore-errors (car (process-lines "opam" "var" "share")))))
- (when (and opam-share (file-directory-p opam-share))
-  ;; Register Merlin
-  (add-to-list 'load-path (expand-file-name "emacs/site-lisp" opam-share))
-  (autoload 'merlin-mode "merlin" nil t nil)
-  ;; Automatically start it in OCaml buffers
-  (add-hook 'tuareg-mode-hook 'merlin-mode t)
-  (add-hook 'caml-mode-hook 'merlin-mode t)
-  ;; Use opam switch to lookup ocamlmerlin binary
-  (setq merlin-command 'opam)
-  ;; To easily change opam switches within a given Emacs session, you can
-  ;; install the minor mode https://github.com/ProofGeneral/opam-switch-mode
-  ;; and use one of its "OPSW" menus.
-  ))
-
-(use-package merlin-eldoc
-  :ensure t
-  :after merlin
-  :config
-  (merlin-eldoc-setup))
-
 
 (defvar dired-jump-history nil
   "Stack of visited directories for C-x C-<down> navigation.")
@@ -1139,12 +1184,16 @@ In review mode, C-p and C-n scroll the buffer instead of moving point."
   (message "All persistent highlights cleared, ring reset"))
 
 (defun le/toggle-persistent-highlight ()
-  "Toggle persistent highlight for symbol at point.
-Highlight if not already highlighted; unhighlight if it is."
+  "Toggle persistent highlight for symbol at point or active region.
+Highlight if not already highlighted; unhighlight if it is.
+With an active region, highlight all occurrences of the region text."
   (interactive)
-  (let ((sym (le/symbol-at-point)))
+  (let* ((sym (if (use-region-p)
+                   (buffer-substring-no-properties (region-beginning) (region-end))
+                 (le/symbol-at-point)))
+         (is-region (use-region-p)))
     (unless sym
-      (user-error "No symbol at point"))
+      (user-error "No symbol at point or active region"))
     (let ((entry (le/find-entry-by-symbol sym)))
       (if entry
           ;; Already highlighted → unhighlight
@@ -1154,10 +1203,13 @@ Highlight if not already highlighted; unhighlight if it is."
             (le/release-face face)
             (message "Removed persistent highlight: %s (reclaimed %s)" sym face))
         ;; Not highlighted → highlight
-        (let* ((face (le/allocate-face))
-               (stored-regexp (highlight-regexp (concat "\\<" (regexp-quote sym) "\\>") face)))
+        (let* ((regexp (if is-region
+                           (regexp-quote sym)
+                         (concat "\\<" (regexp-quote sym) "\\>")))
+               (face (le/allocate-face))
+               (stored-regexp (highlight-regexp regexp face)))
           (unless stored-regexp
-            (setq stored-regexp (concat "\\<" (regexp-quote sym) "\\>")))
+            (setq stored-regexp regexp))
           (push (list :face face :symbol sym :regexp stored-regexp) le/face-ring-allocated)
           (message "Persistently highlighted: %s (%s)" sym face))))))
 
@@ -1396,3 +1448,12 @@ Uses ripgrep if available, falls back to grep. Shows relative paths and highligh
 (use-package dired-sidebar
   :ensure t
   :bind ("C-]" . dired-sidebar-toggle-sidebar))
+
+(use-package imenu-list
+  :bind ("C-c i" . imenu-list-smart-toggle)
+  :custom (imenu-list-focus-after-entry t))
+
+(use-package bufler
+  :bind (("C-c b" . bufler-sidebar))
+  :config
+  (setq bufler-sidebar-width 35))
