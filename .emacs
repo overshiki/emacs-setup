@@ -53,17 +53,17 @@
                            go-mode gptel grip-mode gruber-darker-theme
                            haskell-mode helm-bufler
                            highlight-indent-guides highlight-numbers
-                           highlight-parentheses imenu-list jedi
-                           julia-mode lsp-haskell lsp-julia magit
-                           markdown-preview-mode math-preview mathjax
-                           matlab-mode merlin-eldoc msgpack
-                           multiple-cursors ninja-mode racket-mode
-                           rime rust-mode scala-mode shrface
-                           space-theming spacemacs-theme swiper-helm
-                           term-toggle texfrag toml-mode
-                           transpose-frame treemacs treesit-auto
-                           tuareg valign w3m wgrep-ag yaml-mode
-                           yasnippet)))
+                           highlight-parentheses imenu-list
+                           ivy-posframe jedi julia-mode lsp-haskell
+                           lsp-julia magit markdown-preview-mode
+                           math-preview mathjax matlab-mode
+                           merlin-eldoc msgpack multiple-cursors
+                           ninja-mode racket-mode rime rust-mode
+                           scala-mode shrface space-theming
+                           spacemacs-theme swiper-helm term-toggle
+                           texfrag toml-mode transpose-frame treemacs
+                           treesit-auto tuareg valign w3m wgrep-ag
+                           yaml-mode yasnippet)))
 (custom-set-faces
  ;; custom-set-faces was added by Custom.
  ;; If you edit it by hand, you could mess it up, so be careful.
@@ -1537,3 +1537,11 @@ Uses ripgrep if available, falls back to grep. Shows relative paths and highligh
   :bind (("C-c b" . bufler-sidebar))
   :config
   (setq bufler-sidebar-width 35))
+
+
+(use-package ivy-posframe
+  :after ivy
+  :config
+  (setq ivy-posframe-display-functions-alist
+        '((t . ivy-posframe-display-at-frame-center)))
+  (ivy-posframe-mode 1))
