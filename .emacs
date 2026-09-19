@@ -47,8 +47,8 @@
      default))
  '(package-selected-packages
    '(auto-highlight-symbol bufler cape clipmon cmake-mode company corfu
-                           counsel diff-hl dired-sidebar diredfl
-                           dirvish doom-themes eat elixir-mode
+                           counsel cuda-mode diff-hl dired-sidebar
+                           diredfl dirvish doom-themes eat elixir-mode
                            flycheck futhark-mode git-timemachine
                            go-mode gptel grip-mode gruber-darker-theme
                            haskell-mode helm-bufler
@@ -871,6 +871,25 @@ In review mode, C-p and C-n scroll the buffer instead of moving point."
 ;; Bind to C-c S
 (bind-key "C-c S" 'ssh-login-from-config)
 
+(defun find-file-from-config ()
+  "Read ~/.local-dirs JSON, select directory via ivy, then open it with find-file.
+The config file should be a JSON object where each key is a display name
+and each value is a local path (e.g. {\"projects\": \"/home/le/projects\"})."
+  (interactive)
+  (let* ((config-file (expand-file-name "~/.local-dirs"))
+         (json-data (json-read-file config-file))
+         (dirs (mapcar (lambda (entry)
+                         (cons (symbol-name (car entry)) (cdr entry)))
+                       json-data))
+         (name (ivy-read "Directory: " (mapcar #'car dirs)))
+         (path (cdr (assoc name dirs))))
+    (unless path
+      (error "No path for directory %s" name))
+    (find-file (expand-file-name path))
+    (message "Opened %s → %s" name path)))
+;; Bind to C-c F
+(bind-key "C-c F" 'find-file-from-config)
+
 (defun my-dired-file-split-layout ()
   "Split window: left 1/3 Dired (current dir), right 2/3 current file."
   (interactive)
@@ -1538,30 +1557,59 @@ Uses ripgrep if available, falls back to grep. Shows relative paths and highligh
   :config
   (setq bufler-sidebar-width 35))
 
+(setq pdf-view-resolution 150)   
+(setq pdf-view-use-scaling t)    
+(setq doc-view-resolution 200)
 
-(use-package ivy-posframe
-  :after ivy
+
+(use-package eaf
+  :load-path "~/.emacs.d/site-lisp/emacs-application-framework"
+  :custom
+  (eaf-browser-continue-where-left-off t)
   :config
-  (setq ivy-posframe-display-functions-alist
-        '((t . ivy-posframe-display-at-frame-center)))
-  (ivy-posframe-mode 1))
+  (require 'eaf-browser)      
+  (require 'eaf-pdf-viewer)   
+  (require 'eaf-markdown-previewer)
+  (require 'eaf-pyqterminal)
+  ;; Markdown 预览用 M-x eaf-open 选 markdown-previewer
+  )
 
-;; Ensure the posframe can grow wide enough for long paths
-(setq ivy-posframe-width 120        ; absolute max width
-      ivy-posframe-min-width 60     ; never narrower than this
-      ivy-posframe-height 20        ; absolute max height
-      ivy-posframe-min-height 6)    ; never shorter than this
 
-;; Allow the frame to resize dynamically based on content
-(setq ivy-posframe-parameters
-      '((left-fringe . 8)
-        (right-fringe . 8)
-        (internal-border-width . 6)
-        (undecorated . t)
-        (minibuffer . nil)
-        (no-special-glyphs . t)))
+;; Markdown 预览
+;; M-x eaf-open-markdown
+;; 或设置自动打开
+(add-to-list 'auto-mode-alist '("\\.md\\'" . eaf-markdown-previewer-mode))
 
-;; If the prompt itself is extremely long, Ivy may push candidates off-screen.
-;; This tells Ivy to abbreviate the prompt path so candidates remain visible:
-(setq ivy-fixed-height-minibuffer nil)
-(setq ivy-truncate-lines nil)   ; allow wrapping inside the posframe
+
+(setq eaf-pyqterminal-font-size 28)
+(setq eaf-pyqterminal-font-family "FiraCode")
+
+
+;; (use-package ivy-posframe
+;;   :after ivy
+;;   :config
+;;   (setq ivy-posframe-display-functions-alist
+;;         '((t . ivy-posframe-display-at-frame-center)))
+;;   (ivy-posframe-mode 1))
+
+;; ;; Ensure the posframe can grow wide enough for long paths
+;; (setq ivy-posframe-width 120        ; absolute max width
+;;       ivy-posframe-min-width 60     ; never narrower than this
+;;       ivy-posframe-height 20        ; absolute max height
+;;       ivy-posframe-min-height 6)    ; never shorter than this
+
+;; ;; Allow the frame to resize dynamically based on content
+;; (setq ivy-posframe-parameters
+;;       '((left-fringe . 8)
+;;         (right-fringe . 8)
+;;         (internal-border-width . 6)
+;;         (undecorated . t)
+;;         (minibuffer . nil)
+;;         (no-special-glyphs . t)))
+
+;; ;; If the prompt itself is extremely long, Ivy may push candidates off-screen.
+;; ;; This tells Ivy to abbreviate the prompt path so candidates remain visible:
+;; (setq ivy-fixed-height-minibuffer nil)
+;; (setq ivy-truncate-lines nil)   ; allow wrapping inside the posframe
+
+;; (add-hook 'vterm-mode-hook #'vterm-mouse-mode)

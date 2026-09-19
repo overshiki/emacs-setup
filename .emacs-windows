@@ -873,6 +873,25 @@ In review mode, C-p and C-n scroll the buffer instead of moving point."
 ;; Bind to C-c S
 (bind-key "C-c S" 'ssh-login-from-config)
 
+(defun find-file-from-config ()
+  "Read ~/.local-dirs JSON, select directory via ivy, then open it with find-file.
+The config file should be a JSON object where each key is a display name
+and each value is a local path (e.g. {\"projects\": \"/home/le/projects\"})."
+  (interactive)
+  (let* ((config-file (expand-file-name "~/.local-dirs"))
+         (json-data (json-read-file config-file))
+         (dirs (mapcar (lambda (entry)
+                         (cons (symbol-name (car entry)) (cdr entry)))
+                       json-data))
+         (name (ivy-read "Directory: " (mapcar #'car dirs)))
+         (path (cdr (assoc name dirs))))
+    (unless path
+      (error "No path for directory %s" name))
+    (find-file (expand-file-name path))
+    (message "Opened %s → %s" name path)))
+;; Bind to C-c F
+(bind-key "C-c F" 'find-file-from-config)
+
 (defun my-dired-file-split-layout ()
   "Split window: left 1/3 Dired (current dir), right 2/3 current file."
   (interactive)
