@@ -41,6 +41,31 @@ A collection of scripts to install Emacs, configure fonts, and set up post-insta
 - Downloads and extracts `tramp-2.8.1.3` to `~/lang/elisp/`
 - Clones and builds `emacs-tramp-rpc` Rust server
 
+## EAF (Emacs Application Framework)
+
+`.emacs` loads EAF from `~/.emacs.d/site-lisp/emacs-application-framework` and enables
+the browser, PDF viewer, markdown previewer (`*.md` files open with
+`eaf-markdown-previewer-mode`), and pyqterminal (FiraCode, size 28).
+
+Install EAF with:
+
+```bash
+git clone --depth=1 -b master https://github.com/emacs-eaf/emacs-application-framework.git ~/.emacs.d/site-lisp/emacs-application-framework/
+
+cd ~/.emacs.d/site-lisp/emacs-application-framework
+chmod +x ./install-eaf.py
+./install-eaf.py
+
+pip install markdown grip
+```
+
+EAF embeds Qt widgets in Emacs through X11, so Emacs must not run on Wayland.
+Add this alias to `~/.profile` or `~/.bashrc`:
+
+```bash
+alias emacs='GDK_BACKEND=x11 QT_QPA_PLATFORM=xcb emacs'
+```
+
 ## Note
 
 - `install.el` is a dependency loaded by `setup.el` during installation
